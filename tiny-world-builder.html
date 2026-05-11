@@ -1405,15 +1405,9 @@
       cloudLayer.style.opacity = '0';
       cloudLayer.style.animationPlayState = 'paused';
     }
-    // syncCloudPopulation is a hoisted function declaration but the
-    // cloud-system constants (CLOUD_MAX, the clouds array, etc.) are
-    // declared further down the file. The first applyCloudSettings()
-    // call happens during early init, before that block runs, so guard
-    // against the temporal-dead-zone access — the cloud block calls
-    // syncCloudPopulation() itself once it's ready.
-    try {
-      if (typeof syncCloudPopulation === 'function') syncCloudPopulation();
-    } catch (_) { /* cloud system not initialized yet */ }
+    // syncCloudPopulation no-ops if the cloud block hasn't run yet
+    // (var-hoisted state — see comment near the cloud block).
+    syncCloudPopulation();
   }
 
   function applyTiltShiftSettings() {
@@ -5673,15 +5667,20 @@
   // Chunky clouds that drift slowly across the sky in world space, so they
   // sit naturally over both the home grid and ghost boards. Count and speed
   // come from the existing Clouds / Cloud-speed sliders in render settings.
-  const cloudGroup = new THREE.Group();
+  //
+  // These are declared with var so they hoist to script-top as undefined,
+  // letting applyCloudSettings() safely no-op when it's called before this
+  // block runs (early-init order: applyCloudSettings runs at ~line 1545,
+  // this block runs much later). syncCloudPopulation guards on `clouds`.
+  var cloudGroup = new THREE.Group();
   cloudGroup.name = 'clouds';
   scene.add(cloudGroup);
-  const clouds = [];
-  const CLOUD_MAX = 18;
-  const CLOUD_RANGE_X = 24; // wrap-around x extent (centred on 0)
-  const CLOUD_Y_MIN = 5.5;
-  const CLOUD_Y_MAX = 8.5;
-  const CLOUD_Z_RANGE = 18;
+  var clouds = [];
+  var CLOUD_MAX = 18;
+  var CLOUD_RANGE_X = 24; // wrap-around x extent (centred on 0)
+  var CLOUD_Y_MIN = 5.5;
+  var CLOUD_Y_MAX = 8.5;
+  var CLOUD_Z_RANGE = 18;
 
   function makeCloud() {
     const g = new THREE.Group();
@@ -5726,6 +5725,9 @@
   }
 
   function syncCloudPopulation() {
+    // Bail when called before the cloud block has run — `clouds` is
+    // hoisted as `undefined` until then.
+    if (!clouds) return;
     const target = Math.round(Math.max(0, Math.min(1, renderCloudAmount)) * CLOUD_MAX);
     while (clouds.length > target) {
       const c = clouds.pop();
@@ -5738,7 +5740,7 @@
   }
 
   function updateClouds(dt) {
-    if (!clouds.length) return;
+    if (!clouds || !clouds.length) return;
     const baseSpeed = renderCloudSpeed * 2.4; // 0 → 2.4 m/s scalar
     if (baseSpeed <= 0.0001) return;
     for (const c of clouds) {
