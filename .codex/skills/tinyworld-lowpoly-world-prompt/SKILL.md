@@ -18,6 +18,17 @@ Prompt principles:
 - Use forced `buildingType` only when a distinct one-cell variant is wanted; otherwise leave houses as `buildingType: null` so cluster logic can work.
 - Keep output strictly machine-parseable JSON matching the schema.
 
+Primitive assembly prompting:
+
+- Tell models they cannot invent new object kinds, meshes, labels, or custom geometry in JSON.
+- Ask them to translate requested objects into available primitives: terrain, raised terrainFloors, houses/building variants, fences/fenceSide, rocks, bridges, crops, tufts, and trees.
+- Include concrete decompositions for non-native requests:
+  - skate park = path/dirt plaza + raised terrain ramps + rocks as obstacles + fences as rails/edges + tufts/trees as landscaping.
+  - market = path plaza + cottage/manor stalls + fences as queue rails + crops/pumpkins as goods.
+  - playground = path/dirt base + rocks as play forms + fences as boundary + trees/tufts for park context.
+  - quarry = raised dirt/grass terraces + rocks of varied floors + path access road + sparse tufts.
+- Emphasize legibility from the default isometric camera: 3–5 clear assembled features beats many scattered cells.
+
 For Auto suggestions:
 
 - Return candidate actions, not coordinates.

@@ -80,6 +80,12 @@ if [[ -d sounds ]]; then
   cp -R sounds/. "$DIST/sounds/"
 fi
 
+# 3D model assets referenced directly by the single-file app.
+if [[ -d models ]]; then
+  mkdir -p "$DIST/models"
+  cp -R models/. "$DIST/models/"
+fi
+
 : > "$DIST/.nojekyll"
 
 {

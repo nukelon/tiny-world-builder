@@ -43,4 +43,5 @@ Validation:
 - Repeated terrain placement on an empty cell should raise the tile.
 - Repeated object placement should keep `terrainFloors` unchanged and alter only the object.
 - Objects should sit on raised terrain when rendered.
+- Houses placed on `path` or `water` must preserve that terrain and render on an underpass/stilt base; do not coerce those tiles back to grass.
 - Same-terrain repeat placement should be visible before refresh/reload.

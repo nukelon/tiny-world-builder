@@ -25,6 +25,7 @@ Guidance for AI coding agents working in this repo. Read this before touching
   - `.codex/skills/tinyworld-visual-qa` — browser checks and visual QA.
   - `.codex/skills/tinyworld-render-performance` — post-processing, renderer, shadows, and GPU budget.
   - `.codex/skills/tinyworld-lowpoly-world-prompt` — model prompting for coherent low-poly worlds.
+  - `.codex/skills/tinyworld-lowpoly-stylized-3d` — low-poly/stylized 3D asset design, imports, materials, scale, and animation.
 
 ## House style
 
