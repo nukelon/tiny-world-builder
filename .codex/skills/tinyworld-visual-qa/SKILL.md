@@ -13,6 +13,7 @@ Checks:
 - Toolbar shortcuts still work: `0`, `1`-`9`, letter tools, `E`.
 - Left-click places only on the editable home board.
 - Right-drag and Space+drag pan smoothly.
+- Dragging/clicking the minimap canvas pans the camera target while dragging the minimap chrome/footer still moves the widget.
 - Orbit still works with normal left-drag.
 - Ghost boards do not become editable.
 - The opacity torch is smooth and does not reveal square board seams.

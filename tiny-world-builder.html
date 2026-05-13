@@ -3983,6 +3983,7 @@
     expandVisibleSizeOnFirstMove();
     updateCamera();
     ensureGhostBoardsAroundTarget();
+    if (typeof requestMinimapRepaint === 'function') requestMinimapRepaint();
   }
   function panCameraByCells(dx, dz) {
     target.x += dx;
@@ -3990,6 +3991,7 @@
     expandVisibleSizeOnFirstMove();
     updateCamera();
     ensureGhostBoardsAroundTarget();
+    if (typeof requestMinimapRepaint === 'function') requestMinimapRepaint();
   }
   updateCamera();
 
@@ -10477,6 +10479,7 @@
     polar    = start.po + (end.po - start.po) * u;
     onResize();
     if (typeof ensureGhostBoardsAroundTarget === 'function') ensureGhostBoardsAroundTarget();
+    if (typeof requestMinimapRepaint === 'function') requestMinimapRepaint();
     if (homeTween.t >= 1) homeTween = null;
   }
 
@@ -15657,7 +15660,9 @@
   }
 
   // -------- minimap (ported from OWB hud.js redrawMinimap) --------
-  // Repaints a 2D top-down view of the home grid from world state.
+  // Repaints a 2D top-down map window from world + generated preview-board
+  // state. The map follows the current camera target, so panning away from
+  // the home board keeps a useful 2D overview instead of a stale 8x8 tile.
   // Tile colour comes from the terrain palette (matches the 3D scene);
   // a per-kind silhouette is overlaid for any populated cell so trees,
   // houses, animals etc. read as the same shape they do in 3D.
@@ -15674,24 +15679,52 @@
     snow:  '#f2f5fa',
   };
   let minimapRepaintQueued = false;
+  let minimapState = null;
   function requestMinimapRepaint() {
     if (minimapRepaintQueued) return;
     minimapRepaintQueued = true;
     requestAnimationFrame(() => { minimapRepaintQueued = false; redrawMinimap(); });
   }
   window.__requestMinimapRepaint = requestMinimapRepaint;
+  function minimapViewCellCount() {
+    return Math.max(GRID, Math.min(HOME_GRID_MAX, Math.ceil(renderVisibleSize || GRID)));
+  }
+  function minimapGlobalCell(gx, gz) {
+    const bx = Math.floor(gx / GRID);
+    const bz = Math.floor(gz / GRID);
+    const lx = gx - bx * GRID;
+    const lz = gz - bz * GRID;
+    if (lx < 0 || lx >= GRID || lz < 0 || lz >= GRID) return null;
+    return ghostCellAt(bx, bz, lx, lz);
+  }
+  function minimapWorldFromCanvasPoint(px, py) {
+    if (!minimapState) return null;
+    const { startGx, startGz, cells, width, height } = minimapState;
+    const gx = startGx + (px / Math.max(1, width)) * cells;
+    const gz = startGz + (py / Math.max(1, height)) * cells;
+    return { x: gx - GRID / 2, z: gz - GRID / 2 };
+  }
   function redrawMinimap() {
     const canvas = document.getElementById('minimap-canvas');
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
-    const N = GRID;
+    const N = minimapViewCellCount();
     const W = canvas.width, H = canvas.height;
     const cw = W / N, ch = H / N;
+    const centerGx = Math.floor(target.x + GRID / 2);
+    const centerGz = Math.floor(target.z + GRID / 2);
+    const startGx = centerGx - Math.floor(N / 2);
+    const startGz = centerGz - Math.floor(N / 2);
+    minimapState = { startGx, startGz, cells: N, width: W, height: H };
+    const sizeEl = document.getElementById('minimap-size');
+    if (sizeEl) sizeEl.textContent = N + '×' + N + ' map';
     ctx.clearRect(0, 0, W, H);
     // Terrain pass.
     for (let x = 0; x < N; x++) {
       for (let z = 0; z < N; z++) {
-        const cell = (world[x] && world[x][z]) ? world[x][z] : null;
+        const gx = startGx + x;
+        const gz = startGz + z;
+        const cell = minimapGlobalCell(gx, gz);
         const terrain = (cell && cell.terrain) || 'grass';
         let color = MINIMAP_TERRAIN_COLORS[terrain] || '#9ec74b';
         // Tint by terrainFloors so hills/mountains read as raised.
@@ -15714,11 +15747,32 @@
     // Kind silhouettes.
     for (let x = 0; x < N; x++) {
       for (let z = 0; z < N; z++) {
-        const cell = (world[x] && world[x][z]) ? world[x][z] : null;
+        const gx = startGx + x;
+        const gz = startGz + z;
+        const cell = minimapGlobalCell(gx, gz);
         if (!cell || !cell.kind) continue;
         drawMinimapProp(ctx, cell.kind, x * cw + cw / 2, z * ch + ch / 2, Math.min(cw, ch));
       }
     }
+    // Home-board outline plus current camera target. The map can pan across
+    // preview boards, so this keeps orientation obvious when the 2D window
+    // drifts away from the saved home grid.
+    ctx.save();
+    ctx.strokeStyle = 'rgba(255,255,255,0.70)';
+    ctx.lineWidth = Math.max(1, W * 0.006);
+    ctx.strokeRect((0 - startGx) * cw, (0 - startGz) * ch, GRID * cw, GRID * ch);
+    const tx = (target.x + GRID / 2 - startGx) * cw;
+    const tz = (target.z + GRID / 2 - startGz) * ch;
+    ctx.strokeStyle = 'rgba(42,39,34,0.60)';
+    ctx.lineWidth = Math.max(1, W * 0.004);
+    ctx.beginPath();
+    ctx.arc(tx, tz, Math.max(4, Math.min(cw, ch) * 0.28), 0, Math.PI * 2);
+    ctx.moveTo(tx - Math.max(5, cw * 0.45), tz);
+    ctx.lineTo(tx + Math.max(5, cw * 0.45), tz);
+    ctx.moveTo(tx, tz - Math.max(5, ch * 0.45));
+    ctx.lineTo(tx, tz + Math.max(5, ch * 0.45));
+    ctx.stroke();
+    ctx.restore();
   }
   function drawMinimapProp(ctx, kind, cx, cy, size) {
     const s = size;
@@ -15789,10 +15843,15 @@
 
   (function wireMinimap() {
     const wrap = document.getElementById('minimap-wrap');
+    const canvas = document.getElementById('minimap-canvas');
     const sizeEl = document.getElementById('minimap-size');
     const fpsEl = document.getElementById('minimap-fps');
     if (!wrap) return;
-    function paintSize() { if (sizeEl) sizeEl.textContent = GRID + '×' + GRID; }
+    function paintSize() {
+      if (!sizeEl) return;
+      const n = (typeof minimapViewCellCount === 'function') ? minimapViewCellCount() : GRID;
+      sizeEl.textContent = n + '×' + n + ' map';
+    }
     paintSize();
     // Restore collapsed state.
     try {
@@ -15877,6 +15936,50 @@
     wrap.addEventListener('pointerup', endMinimapDrag);
     wrap.addEventListener('pointercancel', endMinimapDrag);
     applyStoredMinimapPos();
+
+    // -- map panning --
+    // Dragging the canvas pans the world/camera target. Drag the card chrome
+    // or footer if you want to move the minimap widget itself.
+    let mapPan = null;
+    function panWorldFromMinimapEvent(e) {
+      if (!canvas || !minimapState) return;
+      const r = canvas.getBoundingClientRect();
+      const px = Math.max(0, Math.min(r.width, e.clientX - r.left));
+      const py = Math.max(0, Math.min(r.height, e.clientY - r.top));
+      const worldPoint = minimapWorldFromCanvasPoint(
+        px * (canvas.width / Math.max(1, r.width)),
+        py * (canvas.height / Math.max(1, r.height)),
+      );
+      if (!worldPoint) return;
+      target.x = worldPoint.x;
+      target.z = worldPoint.z;
+      expandVisibleSizeOnFirstMove();
+      updateCamera();
+      ensureGhostBoardsAroundTarget();
+      requestMinimapRepaint();
+    }
+    if (canvas) {
+      canvas.addEventListener('pointerdown', e => {
+        e.preventDefault();
+        e.stopPropagation();
+        mapPan = { id: e.pointerId };
+        try { canvas.setPointerCapture(e.pointerId); } catch (_) {}
+        panWorldFromMinimapEvent(e);
+      });
+      canvas.addEventListener('pointermove', e => {
+        if (!mapPan) return;
+        e.preventDefault();
+        e.stopPropagation();
+        panWorldFromMinimapEvent(e);
+      });
+      const endMapPan = e => {
+        if (!mapPan) return;
+        e.stopPropagation();
+        mapPan = null;
+      };
+      canvas.addEventListener('pointerup', endMapPan);
+      canvas.addEventListener('pointercancel', endMapPan);
+    }
     // FPS readout — own RAF sampler so it reflects real frame time
     // regardless of whether the dev stats overlay is enabled.
     if (fpsEl) {
