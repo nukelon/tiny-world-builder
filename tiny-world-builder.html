@@ -1800,6 +1800,62 @@
   body.tod-day   #tod-tint { opacity: 0; }
   body.tod-dusk  #tod-tint { opacity: 1; background: linear-gradient(180deg, rgba(255, 140, 90, 0.24), transparent 55%); }
   body.tod-night #tod-tint { opacity: 1; background: linear-gradient(180deg, rgba(10, 30, 70, 0.36), rgba(10, 30, 70, 0.1) 60%, transparent); }
+
+  /* Night / dusk UI adaptation — keep icons dark/black, but bump the
+     translucent glass surfaces toward opaque so the dark glyphs stay
+     legible against the dark scene behind them. */
+  body.tod-night .toolbar,
+  body.tod-dusk  .toolbar,
+  body.tod-night .controls,
+  body.tod-dusk  .controls,
+  body.tod-night .appbar,
+  body.tod-dusk  .appbar,
+  body.tod-night .agent-input,
+  body.tod-dusk  .agent-input,
+  body.tod-night .agent-panel,
+  body.tod-dusk  .agent-panel,
+  body.tod-night .minimap-card,
+  body.tod-dusk  .minimap-card,
+  body.tod-night .flyout,
+  body.tod-dusk  .flyout,
+  body.tod-night .audio-panel,
+  body.tod-dusk  .audio-panel,
+  body.tod-night .topbar-popup,
+  body.tod-dusk  .topbar-popup,
+  body.tod-night .world-menu,
+  body.tod-dusk  .world-menu,
+  body.tod-night .modal-card,
+  body.tod-dusk  .modal-card {
+    background: rgba(248, 250, 254, 0.92) !important;
+    border-color: rgba(255, 255, 255, 0.75) !important;
+    box-shadow:
+      0 1px 0 rgba(255, 255, 255, 0.95) inset,
+      0 -1px 0 rgba(120, 130, 150, 0.10) inset,
+      0 1px 2px rgba(0, 0, 0, 0.22),
+      0 18px 48px -14px rgba(0, 0, 0, 0.55) !important;
+    backdrop-filter: blur(22px) saturate(160%) !important;
+    -webkit-backdrop-filter: blur(22px) saturate(160%) !important;
+  }
+  body.tod-night .brand .title,
+  body.tod-dusk  .brand .title {
+    color: #fff;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.55);
+  }
+  body.tod-night .brand .sub,
+  body.tod-dusk  .brand .sub {
+    color: rgba(245, 248, 255, 0.78);
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+  }
+  /* Buttons on those surfaces — keep ink-coloured icons (i.e. dark) so
+     they stand out against the now-light pill. Don't recolour them. */
+  body.tod-night .btn.icon,
+  body.tod-dusk  .btn.icon,
+  body.tod-night .toolbar .tool,
+  body.tod-dusk  .toolbar .tool,
+  body.tod-night .toolbar .tool-group-btn,
+  body.tod-dusk  .toolbar .tool-group-btn {
+    color: var(--ink);
+  }
   body.weather-rain  #tod-tint { background-image:
     linear-gradient(180deg, rgba(80,110,140,0.2), transparent 60%),
     repeating-linear-gradient(105deg, rgba(255,255,255,0.06) 0 1px, transparent 1px 6px);
@@ -3181,15 +3237,11 @@
           <button type="button" class="settings-tab active" data-settings-tab="screen">Screen</button>
           <button type="button" class="settings-tab" data-settings-tab="world">World</button>
           <button type="button" class="settings-tab" data-settings-tab="sky">Sky</button>
-          <button type="button" class="settings-tab" data-settings-tab="post">Post FX</button>
           <button type="button" class="settings-tab" data-settings-tab="ai">AI</button>
         </nav>
         <div class="settings-panels">
           <section class="settings-panel active" data-settings-panel="screen">
             <div class="settings-section-title">Screen</div>
-            <label class="check-row">Post processing
-              <input id="render-post" type="checkbox" />
-            </label>
             <label>Shadow quality
               <select id="render-shadow">
                 <option value="low">Low</option>
@@ -3249,6 +3301,21 @@
               <input id="render-object-opacity" type="range" min="0" max="100" step="1" />
               <output id="render-object-opacity-value"></output>
             </div>
+            <div class="range-row">
+              <span>Brightness</span>
+              <input id="render-brightness" type="range" min="75" max="130" step="1" />
+              <output id="render-brightness-value"></output>
+            </div>
+            <div class="range-row">
+              <span>Saturation</span>
+              <input id="render-saturation" type="range" min="80" max="130" step="1" />
+              <output id="render-saturation-value"></output>
+            </div>
+            <div class="range-row">
+              <span>Contrast</span>
+              <input id="render-contrast" type="range" min="85" max="125" step="1" />
+              <output id="render-contrast-value"></output>
+            </div>
           </section>
 
           <section class="settings-panel" data-settings-panel="sky">
@@ -3283,41 +3350,6 @@
               <input id="render-tilt-focus" type="range" min="15" max="80" step="1" />
               <output id="render-tilt-focus-value"></output>
             </div>
-          </section>
-
-          <section class="settings-panel" data-settings-panel="post">
-            <div class="settings-section-title">Post-processing only</div>
-            <div class="range-row">
-              <span>Brightness</span>
-              <input id="render-brightness" type="range" min="75" max="130" step="1" />
-              <output id="render-brightness-value"></output>
-            </div>
-            <div class="range-row">
-              <span>Gamma</span>
-              <input id="render-gamma" type="range" min="60" max="180" step="1" />
-              <output id="render-gamma-value"></output>
-            </div>
-            <div class="range-row">
-              <span>Saturation</span>
-              <input id="render-saturation" type="range" min="80" max="130" step="1" />
-              <output id="render-saturation-value"></output>
-            </div>
-            <div class="range-row">
-              <span>Contrast</span>
-              <input id="render-contrast" type="range" min="85" max="125" step="1" />
-              <output id="render-contrast-value"></output>
-            </div>
-            <div class="range-row">
-              <span>Vignette</span>
-              <input id="render-vignette" type="range" min="0" max="100" step="1" />
-              <output id="render-vignette-value"></output>
-            </div>
-            <div class="range-row">
-              <span>Warmth</span>
-              <input id="render-warmth" type="range" min="-8" max="8" step="1" />
-              <output id="render-warmth-value"></output>
-            </div>
-            <div class="help-line">These controls only affect the shader pass when post processing is on.</div>
           </section>
 
           <section class="settings-panel" data-settings-panel="ai">
@@ -3614,7 +3646,11 @@
     return { w, h };
   }
   const BASE_DPR_CAP = window.matchMedia && window.matchMedia('(max-width: 800px)').matches ? 1.5 : 2.0;
-  let postProcessingEnabled = localStorage.getItem(RENDER_LS.post) === '1';
+  // Post-processing is removed from the UI — the shader pass is permanently
+  // disabled and the brightness/saturation/contrast sliders flow through a
+  // CSS filter on the canvas instead. The variable is kept so existing call
+  // sites that branch on it short-circuit to the no-post path.
+  let postProcessingEnabled = false;
   let renderResolutionScale = storedNumber(RENDER_LS.resolution, 1, 0.55, 1.5);
   let renderSmoothing = storedNumber(RENDER_LS.smoothing, 0.7, 0, 1);
   let renderShadowQuality = localStorage.getItem(RENDER_LS.shadow) || 'balanced';
@@ -10365,7 +10401,6 @@
     const closeBtn = document.getElementById('render-close');
     const resetBtn = document.getElementById('render-reset');
     const status = document.getElementById('render-status');
-    const postEl = document.getElementById('render-post');
     const shadowEl = document.getElementById('render-shadow');
     const resolutionEl = document.getElementById('render-resolution');
     const smoothingEl = document.getElementById('render-smoothing');
@@ -10373,12 +10408,9 @@
     const visibleSizeEl = document.getElementById('render-visible-size');
     const homeGridEl = document.getElementById('render-home-grid');
     const brightnessEl = document.getElementById('render-brightness');
-    const gammaEl = document.getElementById('render-gamma');
     const lightingEl = document.getElementById('render-lighting');
     const saturationEl = document.getElementById('render-saturation');
     const contrastEl = document.getElementById('render-contrast');
-    const vignetteEl = document.getElementById('render-vignette');
-    const warmthEl = document.getElementById('render-warmth');
     const cloudsEl = document.getElementById('render-clouds');
     const cloudSpeedEl = document.getElementById('render-cloud-speed');
     const cloudHeightEl = document.getElementById('render-cloud-height');
@@ -10393,12 +10425,9 @@
     const distanceValue = document.getElementById('render-distance-value');
     const visibleSizeValue = document.getElementById('render-visible-size-value');
     const brightnessValue = document.getElementById('render-brightness-value');
-    const gammaValue = document.getElementById('render-gamma-value');
     const lightingValue = document.getElementById('render-lighting-value');
     const saturationValue = document.getElementById('render-saturation-value');
     const contrastValue = document.getElementById('render-contrast-value');
-    const vignetteValue = document.getElementById('render-vignette-value');
-    const warmthValue = document.getElementById('render-warmth-value');
     const cloudsValue = document.getElementById('render-clouds-value');
     const cloudSpeedValue = document.getElementById('render-cloud-speed-value');
     const cloudHeightValue = document.getElementById('render-cloud-height-value');
@@ -10418,7 +10447,6 @@
     settingsTabs.forEach(tab => tab.addEventListener('click', () => selectSettingsTab(tab.dataset.settingsTab)));
 
     function syncControls() {
-      postEl.checked = postProcessingEnabled;
       shadowEl.value = renderShadowQuality;
       resolutionEl.value = String(Math.round(renderResolutionScale * 100));
       smoothingEl.value = String(Math.round(renderSmoothing * 100));
@@ -10426,12 +10454,9 @@
       visibleSizeEl.value = String(renderVisibleSize);
       if (homeGridEl) homeGridEl.value = String(GRID);
       brightnessEl.value = String(Math.round(postMaterial.uniforms.brightness.value * 100));
-      gammaEl.value = String(Math.round(postMaterial.uniforms.gamma.value * 100));
       lightingEl.value = String(Math.round(renderLighting * 100));
       saturationEl.value = String(Math.round(postMaterial.uniforms.saturation.value * 100));
       contrastEl.value = String(Math.round(postMaterial.uniforms.contrast.value * 100));
-      vignetteEl.value = String(Math.round(postMaterial.uniforms.vignette.value * 100));
-      warmthEl.value = String(Math.round(postMaterial.uniforms.warmth.value * 100));
       cloudsEl.value = String(Math.round(renderCloudAmount * 100));
       cloudSpeedEl.value = String(Math.round(renderCloudSpeed * 100));
       cloudHeightEl.value = String(renderCloudHeight);
@@ -10446,12 +10471,9 @@
       distanceValue.textContent = distanceEl.value;
       visibleSizeValue.textContent = visibleSizeEl.value + 'x' + visibleSizeEl.value;
       brightnessValue.textContent = brightnessEl.value + '%';
-      gammaValue.textContent = gammaEl.value + '%';
       lightingValue.textContent = lightingEl.value + '%';
       saturationValue.textContent = saturationEl.value + '%';
       contrastValue.textContent = contrastEl.value + '%';
-      vignetteValue.textContent = vignetteEl.value + '%';
-      warmthValue.textContent = warmthEl.value;
       cloudsValue.textContent = cloudsEl.value + '%';
       cloudSpeedValue.textContent = cloudSpeedEl.value + '%';
       cloudHeightValue.textContent = cloudHeightEl.value;
@@ -10465,18 +10487,14 @@
     }
 
     function persistSettings() {
-      localStorage.setItem(RENDER_LS.post, postProcessingEnabled ? '1' : '0');
       localStorage.setItem(RENDER_LS.resolution, renderResolutionScale.toFixed(2));
       localStorage.setItem(RENDER_LS.smoothing, renderSmoothing.toFixed(2));
       localStorage.setItem(RENDER_LS.visibleDistance, String(renderVisibleDistance));
       localStorage.setItem(RENDER_LS.visibleSize, String(renderVisibleSize));
       localStorage.setItem(RENDER_LS.brightness, postMaterial.uniforms.brightness.value.toFixed(2));
-      localStorage.setItem(RENDER_LS.gamma, postMaterial.uniforms.gamma.value.toFixed(2));
       localStorage.setItem(RENDER_LS.lighting, renderLighting.toFixed(2));
       localStorage.setItem(RENDER_LS.saturation, postMaterial.uniforms.saturation.value.toFixed(2));
       localStorage.setItem(RENDER_LS.contrast, postMaterial.uniforms.contrast.value.toFixed(2));
-      localStorage.setItem(RENDER_LS.vignette, postMaterial.uniforms.vignette.value.toFixed(2));
-      localStorage.setItem(RENDER_LS.warmth, postMaterial.uniforms.warmth.value.toFixed(2));
       localStorage.setItem(RENDER_LS.shadow, renderShadowQuality);
       localStorage.setItem(RENDER_LS.clouds, renderCloudAmount.toFixed(2));
       localStorage.setItem(RENDER_LS.cloudSpeed, renderCloudSpeed.toFixed(2));
@@ -10488,12 +10506,11 @@
     }
 
     function applyFromControls() {
-      const wasPost = postProcessingEnabled;
-      postProcessingEnabled = postEl.checked;
-      // Force isometric whenever post-processing turns on — the shader
-      // pipeline depends on the ortho framing.
-      if (postProcessingEnabled && cameraMode !== 'ortho') setCameraMode('ortho');
-      else if (postProcessingEnabled !== wasPost) setCameraMode(cameraMode);
+      // Post-processing is permanently off in this build. Brightness /
+      // saturation / contrast are applied to the canvas via CSS filter
+      // (see applyColorFilterFallback). The post uniforms are still
+      // written so any code that reads them stays consistent.
+      postProcessingEnabled = false;
       setShadowQuality(shadowEl.value);
       setRenderResolutionScale(parseInt(resolutionEl.value, 10) / 100);
       renderSmoothing = parseInt(smoothingEl.value, 10) / 100;
@@ -10501,13 +10518,10 @@
       setRenderVisibleDistance(parseInt(distanceEl.value, 10));
       setRenderVisibleSize(parseInt(visibleSizeEl.value, 10));
       postMaterial.uniforms.brightness.value = parseInt(brightnessEl.value, 10) / 100;
-      postMaterial.uniforms.gamma.value = parseInt(gammaEl.value, 10) / 100;
       renderLighting = parseInt(lightingEl.value, 10) / 100;
       applyLightingSettings();
       postMaterial.uniforms.saturation.value = parseInt(saturationEl.value, 10) / 100;
       postMaterial.uniforms.contrast.value = parseInt(contrastEl.value, 10) / 100;
-      postMaterial.uniforms.vignette.value = parseInt(vignetteEl.value, 10) / 100;
-      postMaterial.uniforms.warmth.value = parseInt(warmthEl.value, 10) / 100;
       renderCloudAmount = parseInt(cloudsEl.value, 10) / 100;
       renderCloudSpeed = parseInt(cloudSpeedEl.value, 10) / 100;
       renderCloudHeight = parseFloat(cloudHeightEl.value);
@@ -10563,7 +10577,8 @@
     });
     closeBtn.addEventListener('click', () => { modal.hidden = true; });
     modal.addEventListener('click', e => { if (e.target === modal) modal.hidden = true; });
-    for (const el of [postEl, shadowEl, resolutionEl, smoothingEl, distanceEl, visibleSizeEl, brightnessEl, gammaEl, lightingEl, saturationEl, contrastEl, vignetteEl, warmthEl, cloudsEl, cloudSpeedEl, cloudHeightEl, cloudShadowEl, tiltBlurEl, tiltFocusEl, ghostOpacityEl, floorOpacityEl, objectOpacityEl]) {
+    for (const el of [shadowEl, resolutionEl, smoothingEl, distanceEl, visibleSizeEl, brightnessEl, lightingEl, saturationEl, contrastEl, cloudsEl, cloudSpeedEl, cloudHeightEl, cloudShadowEl, tiltBlurEl, tiltFocusEl, ghostOpacityEl, floorOpacityEl, objectOpacityEl]) {
+      if (!el) continue;
       el.addEventListener('input', applyFromControls);
       el.addEventListener('change', applyFromControls);
     }
@@ -10584,13 +10599,10 @@
       setRenderVisibleDistance(2);
       setRenderVisibleSize(16);
       postMaterial.uniforms.brightness.value = 1;
-      postMaterial.uniforms.gamma.value = 1;
       renderLighting = 1.34;
       applyLightingSettings();
       postMaterial.uniforms.saturation.value = 1;
       postMaterial.uniforms.contrast.value = 1;
-      postMaterial.uniforms.vignette.value = 0.04;
-      postMaterial.uniforms.warmth.value = 0;
       renderCloudAmount = 0.61;
       renderCloudSpeed = 0.35;
       renderCloudHeight = 7;
