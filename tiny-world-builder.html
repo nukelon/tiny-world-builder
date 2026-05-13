@@ -12908,6 +12908,27 @@
       if (s === 'winter') return 0xd8dee8;
       return 0xb39879;
     }
+    // Sky-colour profile for the SCENE BACKGROUND (the cream behind the
+    // canvas only ever showed at the very edges before).  Anchors per
+    // tod state — pure 3D scene background, not a CSS layer.
+    function bgColorForTod(min) {
+      const ANCHORS = [
+        { t: 0,    c: 0x0c1226 }, // deep night
+        { t: 420,  c: 0xf2c2a0 }, // dawn
+        { t: 780,  c: 0xc7e1f4 }, // bright day
+        { t: 1170, c: 0xd9784a }, // dusk
+        { t: 1380, c: 0x0e1330 },
+        { t: 1440, c: 0x0c1226 },
+      ];
+      for (let i = 0; i < ANCHORS.length - 1; i++) {
+        const a = ANCHORS[i], b = ANCHORS[i + 1];
+        if (min >= a.t && min <= b.t) {
+          const tt = (min - a.t) / Math.max(1, (b.t - a.t));
+          return lerpColor(a.c, b.c, tt);
+        }
+      }
+      return ANCHORS[0].c;
+    }
     function applyLights() {
       captureLightBase();
       if (!lightBase) { console.warn('[lights] no baseline captured'); return; }
@@ -12919,16 +12940,26 @@
         const sc = wx.tint != null ? lerpColor(tod.sunC, wx.tint, 0.35) : tod.sunC;
         sun.color.setHex(sc);
         hemi.intensity = Math.max(0, lightBase.hemiI * (tod.hemiI / 0.30) * wx.hemiMul);
-        // Clamp hemi.intensity to a sane ceiling so weather=clear at noon
-        // doesn't blow out exposure (lightBase.hemiI may have been edited
-        // by the render-settings panel since boot).
         if (hemi.intensity > 1.6) hemi.intensity = 1.6;
         hemi.color.setHex(tod.hemiSky);
-        // Blend the season ground tint with the tod ground anchor.
         hemi.groundColor.setHex(lerpColor(tod.hemiGround, seasonGround, 0.45));
-        // Lift ambient just enough at night so nothing is pitch black.
         const ambBoost = (tod.sunI < 0.5) ? 1.6 : 1.0;
         ambient.intensity = Math.max(0, lightBase.ambI * ambBoost);
+        // 3D scene background — drives the colour visible past the world
+        // edge.  This is what makes 'night' actually look dark instead of
+        // just the canvas darkening behind a static cream backdrop.
+        let bgHex = bgColorForTod(todMinutes);
+        if (wx.tint != null) bgHex = lerpColor(bgHex, wx.tint, 0.30);
+        if (scene && scene.background) scene.background.setHex(bgHex);
+        if (renderer && renderer.setClearColor) renderer.setClearColor(bgHex, 1);
+        // Drive the CSS --bg variable so the page chrome around the
+        // canvas (vignette, body backdrop) follows the same colour.
+        document.documentElement.style.setProperty('--bg', '#' + bgHex.toString(16).padStart(6, '0'));
+        // Ink stays high contrast — flip to a light ink at night so the
+        // brand title remains readable on a dark backdrop.
+        const isDark = (tod.sunI < 0.55);
+        document.documentElement.style.setProperty('--ink', isDark ? '#f4ede0' : '#2a2722');
+        document.documentElement.style.setProperty('--muted', isDark ? '#cdc1ad' : '#8a847a');
       } catch (err) { console.warn('[lights] apply failed:', err); }
     }
     window.__applyLights = applyLights;
