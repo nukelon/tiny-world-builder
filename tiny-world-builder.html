@@ -3120,6 +3120,16 @@
     rockDk:    new THREE.MeshLambertMaterial({ color: 0x707066 }),
     rockHi:    new THREE.MeshLambertMaterial({ color: 0xc3c0b2 }),
     rockMoss:  new THREE.MeshLambertMaterial({ color: 0x6f8a3a }),
+
+    // New terrains (stone / lava / sand / snow).
+    stone:     new THREE.MeshLambertMaterial({ color: 0x8f8a82 }),
+    stoneDk:   new THREE.MeshLambertMaterial({ color: 0x5e5a52 }),
+    lava:      new THREE.MeshLambertMaterial({ color: 0xe7592b, emissive: 0xb02410, emissiveIntensity: 0.8 }),
+    lavaCrust: new THREE.MeshLambertMaterial({ color: 0x3a201a }),
+    sand:      new THREE.MeshLambertMaterial({ color: 0xe6cc7c }),
+    sandDk:    new THREE.MeshLambertMaterial({ color: 0xc6a64b }),
+    snow:      new THREE.MeshLambertMaterial({ color: 0xf2f5fa }),
+    snowDk:    new THREE.MeshLambertMaterial({ color: 0xc9d1dc }),
     bridgeWood:  new THREE.MeshLambertMaterial({ color: 0x8b5a32 }),
     bridgeWoodD: new THREE.MeshLambertMaterial({ color: 0x5f3a20 }),
 
@@ -3287,6 +3297,10 @@
     if (terrain === 'path')  topMat = M.path;
     if (terrain === 'water') topMat = M.water;
     if (terrain === 'dirt')  topMat = M.dirtRich;
+    if (terrain === 'stone') topMat = M.stone;
+    if (terrain === 'lava')  topMat = M.lava;
+    if (terrain === 'sand')  topMat = M.sand;
+    if (terrain === 'snow')  topMat = M.snow;
 
     const top = new THREE.Mesh(roundedSlab(TILE * 0.98, TOP_H, 0.06), topMat);
     top.position.y = rise;
@@ -7436,6 +7450,10 @@
     { id: 'path',   label: 'Path',   terrain: 'path',  color: '#e8d5a8', shortcut: '2', group: 'terrain' },
     { id: 'dirt',   label: 'Dirt',   terrain: 'dirt',  color: '#5a3b27', shortcut: '3', group: 'terrain' },
     { id: 'water',  label: 'Water',  terrain: 'water', color: '#4a90c2', shortcut: '4', group: 'terrain' },
+    { id: 'stone',  label: 'Stone',  terrain: 'stone', color: '#8f8a82', group: 'terrain' },
+    { id: 'lava',   label: 'Lava',   terrain: 'lava',  color: '#e7592b', group: 'terrain' },
+    { id: 'sand',   label: 'Sand',   terrain: 'sand',  color: '#e6cc7c', group: 'terrain' },
+    { id: 'snow',   label: 'Snow',   terrain: 'snow',  color: '#f2f5fa', group: 'terrain' },
     { id: 'house',  label: 'House',  kind: 'house', color: '#3a72c8', shortcut: '5', group: 'build',
       variants: [
         { id: 'auto',       label: 'Auto',      buildingType: null,         hint: 'cluster + auto-promo' },
@@ -7475,7 +7493,7 @@
   ];
 
   const TOOL_GROUPS = [
-    { id: 'terrain', label: 'Terrain', toolIds: ['grass', 'path', 'dirt', 'water', 'rock', 'tuft'], iconTool: 'grass' },
+    { id: 'terrain', label: 'Terrain', toolIds: ['grass', 'path', 'dirt', 'water', 'stone', 'lava', 'sand', 'snow', 'rock', 'tuft'], iconTool: 'grass' },
     { id: 'build', label: 'Build', toolIds: ['house', 'fence', 'bridge'], iconTool: 'house' },
     { id: 'grow', label: 'Grow', toolIds: ['tree', 'flower', 'bush', 'crop', 'corn', 'wheat', 'pumpkin', 'carrot', 'sunflower'], iconTool: 'tree' },
     { id: 'animals', label: 'Animals', toolIds: ['cow', 'sheep'], iconTool: 'cow' },
@@ -10376,7 +10394,7 @@
     properties: {
       terrain: {
         type: 'string',
-        enum: ['grass', 'path', 'dirt', 'water'],
+        enum: ['grass', 'path', 'dirt', 'water', 'stone', 'lava', 'sand', 'snow'],
       },
       kind: {
         type: ['string', 'null'],
@@ -10561,7 +10579,7 @@
     if (typeof data.v === 'string') data.v = parseInt(data.v, 10);
     if (data.v !== 1 && data.v !== 2 && data.v !== 3 && data.v !== 4) return 'unsupported v: ' + data.v;
     if (!Array.isArray(data.cells)) return 'cells must be an array';
-    const okTerrain = new Set(['grass','path','dirt','water']);
+    const okTerrain = new Set(['grass','path','dirt','water','stone','lava','sand','snow']);
     const okKind = new Set([null,'house','tree','fence','rock','hill','bridge','crop','corn','wheat','pumpkin','carrot','sunflower','tuft','flower','bush','cow','sheep']);
     const okBT = new Set([null,'cottage','manor','tower','turret','skyscraper']);
     const okFenceSide = new Set([null,'n','s','e','w','center-x','center-z']);
@@ -10923,7 +10941,7 @@
     if (!data || typeof data !== 'object' || Array.isArray(data)) {
       throw new Error('schema check: response was not an object');
     }
-    const okTerrain = new Set(['grass','path','dirt','water']);
+    const okTerrain = new Set(['grass','path','dirt','water','stone','lava','sand','snow']);
     const okKind = new Set([null,'house','tree','fence','rock','hill','bridge','crop','corn','wheat','pumpkin','carrot','sunflower','tuft','flower','bush','cow','sheep']);
     const okBT = new Set([null,'cottage','manor','tower','turret','skyscraper']);
     let kind = data.kind === undefined ? null : data.kind;
