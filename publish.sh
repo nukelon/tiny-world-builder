@@ -22,6 +22,7 @@ Outputs:
   dist/LICENSE
   dist/assets/*                   Screenshots/assets
   dist/cluso/*                    Optional Cluso annotation embed
+  dist/vendor/*                   Self-hosted runtime libraries
   dist/sounds/*.mp3               Music + foley used by the app
   dist/.nojekyll                  GitHub Pages compatibility
   dist/VERSION.txt                Build metadata
@@ -44,6 +45,7 @@ fi
 
 # Lightweight sanity checks before publishing.
 node tools/check.js
+node tools/smoke-static.js
 printf '✓ publish checks passed\n'
 
 rm -rf "$DIST"
@@ -67,6 +69,17 @@ if [[ -d cluso ]]; then
     for f do
       mkdir -p "../dist/cluso/$(dirname "$f")"
       cp "$f" "../dist/cluso/$f"
+    done
+  ' sh {} +)
+fi
+
+# Self-hosted runtime libraries referenced by vendor/<file> tags in the HTML.
+if [[ -d vendor ]]; then
+  mkdir -p "$DIST/vendor"
+  (cd vendor && find . -type f ! -name '.DS_Store' -exec sh -c '
+    for f do
+      mkdir -p "../dist/vendor/$(dirname "$f")"
+      cp "$f" "../dist/vendor/$f"
     done
   ' sh {} +)
 fi

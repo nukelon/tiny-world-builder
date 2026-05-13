@@ -1,19 +1,18 @@
 ---
 name: tinyworld-render-performance
-description: Use when changing Tiny World Builder renderer setup, post-processing, shadows, smoke, ghost board render cost, frame loop, or GPU performance.
+description: Use when changing Tiny World Builder renderer setup, shadows, smoke, voxel clouds, ghost board render cost, frame loop, or GPU performance.
 ---
 
 # Tiny World Render Performance
 
-Keep post-processing lightweight.
+Keep the renderer single-pass and predictable.
 
 Current renderer contract:
 
-- Single full-screen post pass only: scene render target, then shader to screen.
-- No EffectComposer dependency or bundler.
+- No post-processing pipeline: no EffectComposer, no render target, no screen shader. Render directly with `renderer.render(scene, camera)`.
 - Cap DPR; do not return to uncapped `devicePixelRatio`.
-- Main WebGL context uses `antialias: true` for the post-disabled (default) path.
-- Post-enabled path uses `WebGLMultisampleRenderTarget` with `samples = min(8, maxSamples)` on WebGL2 plus a luminance-gated FXAA-style 5-tap inside the post fragment shader. The FXAA tap only kicks in on edges (`edge = clamp((lmax - lmin) * 3.0, 0, 1)`) so flat tile interiors stay sharp.
+- Main WebGL context uses `antialias: true`; the old smoothing/post pass has been removed.
+- Brightness/saturation/contrast are lightweight CSS filters on the WebGL canvas, not shader uniforms.
 
 GPU caches (introduced for low-end GPU + visible-distance scaling):
 
@@ -22,12 +21,12 @@ GPU caches (introduced for low-end GPU + visible-distance scaling):
 - Ghost boards are built incrementally via `pendingGhostBoards` queue, drained inside `animate()` by `processGhostBoardQueue(budgetMs)` with a small per-frame budget. `ensureGhostBoardsAroundTarget` only enqueues — it must never build synchronously, or load/reset/visible-distance changes hitch the main thread.
 - Generated/imported world application supports sliced progressive rendering. In sliced mode, `applyState(..., { sliced: true })` sorts terrain and object/detail passes by distance from `opts.renderOrigin` or the current camera `target`, so visible/nearby cells appear before farther cells. Preserve that distance-ranked ordering when changing generation rendering.
 - Stats overlay (`?stats=1` or backtick key) reads `renderer.info` and reports FPS, draws, tris, geoms, mats, programs, textures, ghost-board count + queue depth. Use it to measure any rendering change.
-- Default color grade should stay neutral: saturation 1, contrast 1, warmth 0, mild vignette only.
+- Default color grade should stay neutral: brightness 1, saturation 1, contrast 1.
 - Render settings are user-adjustable and persisted in `localStorage` under `tinyworld:render:*`.
-- Scene/screen controls must keep working with post-processing disabled: resolution, shadow quality, lighting, visible distance, visible size, clouds, tilt-shift blur/focus, and ghost opacity.
+- Scene/screen controls must keep working in the direct-render path: resolution, shadow quality, lighting, visible distance, visible size, clouds, tilt-shift blur/focus, and ghost opacity.
 - Visible size is the fully opaque torch square in tile-width units; default is 8x8 and the control may expand it up to 20x20. Do not subtract half a tile from this radius, or the board edge starts fading inside the requested size.
 - Ghost opacity 100% means the ghost-strength control itself is maxed, not that the visible-size boundary expands. Outside the visible-size square must still be visibly weaker than the fully rendered center.
-- Post-processing-only controls are shader uniforms: brightness, saturation, contrast, vignette, and warmth.
+- Do not reintroduce post-only shader controls unless the user explicitly asks for a post pipeline.
 - Shadow maps should stay modest unless a visual defect proves otherwise.
 - The sun is the only shadow caster. Its angle is fixed in world space
   (`SUN_OFFSET = (7, 12, 5)`) but its position and `sun.target` follow
@@ -48,5 +47,5 @@ Validation:
 - Run the inline script syntax check.
 - Open `http://localhost:3000/tiny-world-builder`.
 - Confirm `renderer.getPixelRatio()` is at or below the cap.
-- Confirm post target dimensions match canvas size times DPR and samples are enabled on WebGL2.
+- Confirm there are no `postTarget` / `postMaterial` / `postProcessingEnabled` references in `tiny-world-builder.html`.
 - Confirm no console errors after reload.

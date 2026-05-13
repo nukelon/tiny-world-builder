@@ -5,6 +5,7 @@ const path = require('path');
 const root = path.resolve(__dirname, '..');
 const htmlPath = path.join(root, 'tiny-world-builder.html');
 const schemaPath = path.join(root, 'world.schema.json');
+const vercelPath = path.join(root, 'vercel.json');
 const html = fs.readFileSync(htmlPath, 'utf8');
 
 function fail(message) {
@@ -42,15 +43,37 @@ if (JSON.stringify(embeddedSchema) !== JSON.stringify(externalSchema)) {
   fail('embedded WORLD_SCHEMA differs from world.schema.json');
 }
 
-const attrPattern = /<(?:script|link)\b[^>]*\s(?:src|href)=["']([^"']+)["']/gi;
+const attrPattern = /<(script|link)\b[^>]*\s(?:src|href)=["']([^"']+)["']/gi;
 const missing = [];
+const remoteRuntime = [];
 for (const match of html.matchAll(attrPattern)) {
-  const ref = match[1];
-  if (/^(?:https?:)?\/\//.test(ref) || ref.startsWith('data:') || ref.startsWith('#')) continue;
+  const tag = match[1].toLowerCase();
+  const ref = match[2];
+  if (/^(?:https?:)?\/\//.test(ref)) {
+    if (tag === 'script') remoteRuntime.push(ref);
+    continue;
+  }
+  if (ref.startsWith('data:') || ref.startsWith('#')) continue;
   const clean = ref.split(/[?#]/)[0];
   if (!clean || clean.startsWith('/')) continue;
   if (!fs.existsSync(path.join(root, clean))) missing.push(ref);
 }
 if (missing.length) fail('missing referenced static files: ' + missing.join(', '));
+if (remoteRuntime.length) fail('remote script runtime references are not allowed: ' + remoteRuntime.join(', '));
+
+if (!externalSchema.properties || !externalSchema.properties.gridSize) fail('schema missing gridSize contract');
+const cellDef = externalSchema.$defs && externalSchema.$defs.cell;
+if (!cellDef || !Array.isArray(cellDef.oneOf)) fail('schema must accept tuple and object cells via $defs.cell.oneOf');
+
+let vercel;
+try {
+  vercel = JSON.parse(fs.readFileSync(vercelPath, 'utf8'));
+} catch (err) {
+  fail('vercel.json is not valid JSON: ' + err.message);
+}
+const headers = ((vercel.headers || [])[0] || {}).headers || [];
+if (!headers.some(h => h.key === 'Content-Security-Policy' && /script-src 'self'/.test(h.value || ''))) {
+  fail('vercel.json missing self-hosted runtime CSP');
+}
 
 console.log('ok');

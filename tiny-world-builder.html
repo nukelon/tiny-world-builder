@@ -2881,7 +2881,7 @@
 
   <div class="unsaved-banner" id="unsaved-banner" hidden>
     <span class="dot" aria-hidden="true"></span>
-    <span id="unsaved-banner-text">Areas outside your 8×8 grid aren't saved</span>
+    <span id="unsaved-banner-text">Areas outside your home grid aren't saved</span>
   </div>
 
   <div id="audio-panel" class="audio-panel" role="group" aria-label="Sound controls">
@@ -3124,7 +3124,7 @@
         <strong id="confirm-reset-title">Reset to the starter world?</strong>
         <button class="modal-close" id="confirm-reset-close" title="Close" aria-label="Close">×</button>
       </div>
-      <p class="confirm-copy" id="confirm-reset-copy">This replaces your current build with the preset village. You'll lose anything you've placed on the 8×8 grid.</p>
+      <p class="confirm-copy" id="confirm-reset-copy">This replaces your current build with the preset village. You'll lose anything you've placed on the home grid.</p>
       <div class="modal-foot confirm-actions">
         <button class="btn confirm-cancel" id="confirm-reset-cancel" type="button">Cancel</button>
         <button class="btn confirm-destructive" id="confirm-reset-ok" type="button">Reset world</button>
@@ -3289,11 +3289,6 @@
               <output id="render-resolution-value"></output>
             </div>
             <div class="range-row">
-              <span>Smoothing</span>
-              <input id="render-smoothing" type="range" min="0" max="100" step="1" />
-              <output id="render-smoothing-value"></output>
-            </div>
-            <div class="range-row">
               <span>Lighting</span>
               <input id="render-lighting" type="range" min="50" max="145" step="1" />
               <output id="render-lighting-value"></output>
@@ -3309,7 +3304,7 @@
             </div>
             <div class="range-row" hidden>
               <span>Visible size</span>
-              <input id="render-visible-size" type="range" min="8" max="20" step="1" />
+              <input id="render-visible-size" type="range" min="8" max="72" step="1" />
               <output id="render-visible-size-value"></output>
             </div>
             <label>Home board size
@@ -3318,6 +3313,8 @@
                 <option value="12">12 × 12</option>
                 <option value="16">16 × 16</option>
                 <option value="20">20 × 20</option>
+                <option value="32">32 × 32</option>
+                <option value="48">48 × 48</option>
               </select>
             </label>
             <div class="range-row" hidden>
@@ -3458,8 +3455,8 @@
     </div>
   </div>
 
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
+  <script src="vendor/three/three.r128.min.js"></script>
+  <script src="vendor/three/GLTFLoader.r128.js"></script>
   <script>
   /* =====================================================================
      Tiny World Builder — single-file Three.js scene + tile editor
@@ -3467,7 +3464,7 @@
 
   // -------- constants --------
   // GRID is the home board edge length. Mutable: the user can resize it
-  // to 8 / 12 / 16 / 20 from Render Settings. Tiles outside the current
+  // to 8 / 12 / 16 / 20 / 32 / 48 from Render Settings. Tiles outside the current
   // home grid are still tracked in world[][] (used by ghost boards and
   // export) but rendered grayscale; growing GRID brings those tiles into
   // the home area and rebuilds them in full colour.
@@ -3582,15 +3579,10 @@
   const TOP_H = 0.18;     // grass slab thickness
   const DIRT_H = 0.55;    // dirt block height (visible side)
   const RENDER_LS = {
-    post: 'tinyworld:render:post',
     resolution: 'tinyworld:render:resolution',
-    smoothing: 'tinyworld:render:smoothing',
     saturation: 'tinyworld:render:saturation',
     contrast: 'tinyworld:render:contrast',
     brightness: 'tinyworld:render:brightness',
-    gamma: 'tinyworld:render:gamma',
-    vignette: 'tinyworld:render:vignette',
-    warmth: 'tinyworld:render:warmth',
     shadow: 'tinyworld:render:shadow',
     lighting: 'tinyworld:render:lighting',
     visibleDistance: 'tinyworld:render:visibleDistance',
@@ -3606,7 +3598,7 @@
     objectOpacity: 'tinyworld:render:objectOpacity',
     version: 'tinyworld:render:version',
   };
-  const RENDER_SETTINGS_VERSION = '13';
+  const RENDER_SETTINGS_VERSION = '14';
   const RENDER_DEFAULTS = {
     // Defaults tuned to keep image quality crisp while still trimming
     // a few cheap things off the per-frame budget.
@@ -3616,14 +3608,12 @@
     //     swaps in BasicShadowMap with no filtering → jagged dropouts.
     //   - visibleDistance trimmed to 2, clouds + cloudShadow trimmed
     //     because those are pure CPU/GPU saves with no aesthetic cost.
-    post: '0',
+    //   - post-processing settings were removed in v14; colour sliders are
+    //     direct CSS filters on the canvas.
     resolution: '1',
     saturation: '1',
     contrast: '1',
     brightness: '1',
-    gamma: '1',
-    vignette: '0.04',
-    warmth: '0',
     shadow: 'balanced',
     lighting: '1.34',
     visibleDistance: '2',
@@ -3644,6 +3634,15 @@
     for (const [key, value] of Object.entries(RENDER_DEFAULTS)) localStorage.setItem(RENDER_LS[key], value);
     localStorage.setItem(RENDER_LS.version, RENDER_SETTINGS_VERSION);
   }
+  try {
+    for (const key of [
+      'tinyworld:render:post',
+      'tinyworld:render:smoothing',
+      'tinyworld:render:gamma',
+      'tinyworld:render:vignette',
+      'tinyworld:render:warmth',
+    ]) localStorage.removeItem(key);
+  } catch (_) {}
 
   function storedNumber(key, fallback, min, max) {
     const n = parseFloat(localStorage.getItem(key));
@@ -3682,13 +3681,10 @@
     return { w, h };
   }
   const BASE_DPR_CAP = window.matchMedia && window.matchMedia('(max-width: 800px)').matches ? 1.5 : 2.0;
-  // Post-processing is removed from the UI — the shader pass is permanently
-  // disabled and the brightness/saturation/contrast sliders flow through a
-  // CSS filter on the canvas instead. The variable is kept so existing call
-  // sites that branch on it short-circuit to the no-post path.
-  let postProcessingEnabled = false;
   let renderResolutionScale = storedNumber(RENDER_LS.resolution, 1, 0.55, 1.5);
-  let renderSmoothing = storedNumber(RENDER_LS.smoothing, 0.7, 0, 1);
+  let renderBrightness = storedNumber(RENDER_LS.brightness, 1.0, 0.75, 1.3);
+  let renderSaturation = storedNumber(RENDER_LS.saturation, 1.0, 0.8, 1.3);
+  let renderContrast = storedNumber(RENDER_LS.contrast, 1.0, 0.85, 1.25);
   let renderShadowQuality = localStorage.getItem(RENDER_LS.shadow) || 'balanced';
   let renderLighting = storedNumber(RENDER_LS.lighting, 1.34, 0.5, 1.45);
   let renderVisibleDistance = Math.round(storedNumber(RENDER_LS.visibleDistance, 2, 1, 4));
@@ -3728,8 +3724,6 @@
   } catch (_) {}
   const renderer = new THREE.WebGLRenderer({
     canvas: canvasEl,
-    // Hardware MSAA for the post-disabled path. The post-enabled path
-    // uses a multisample render target instead (samples bumped to 8 below).
     antialias: true,
     alpha: true,
     powerPreference: 'high-performance',
@@ -3746,112 +3740,9 @@
   scene.background = new THREE.Color(0xf4ede0);
   const cloudLayer = document.getElementById('cloud-layer');
 
-  // -------- post processing --------
-  const PostRenderTarget = renderer.capabilities.isWebGL2 && THREE.WebGLMultisampleRenderTarget
-    ? THREE.WebGLMultisampleRenderTarget
-    : THREE.WebGLRenderTarget;
-  const postTarget = new PostRenderTarget(1, 1, {
-    minFilter: THREE.LinearFilter,
-    magFilter: THREE.LinearFilter,
-    format: THREE.RGBAFormat,
-    depthBuffer: true,
-    stencilBuffer: false,
-  });
-  if ('samples' in postTarget) {
-    // 4x MSAA. 8x doubled the bandwidth on the post-on path without a
-    // visible improvement at the tile silhouettes we care about — the
-    // shader-side luminance-gated AA below handles the rest. Drop to 4x
-    // to keep the post path within the 60fps budget on lower-end GPUs.
-    const maxSamples = (renderer.capabilities && typeof renderer.capabilities.maxSamples === 'number')
-      ? renderer.capabilities.maxSamples
-      : 4;
-    postTarget.samples = Math.min(4, maxSamples);
-  }
-  postTarget.texture.generateMipmaps = false;
-  const postScene = new THREE.Scene();
-  const postCamera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
-  const postMaterial = new THREE.ShaderMaterial({
-    depthTest: false,
-    depthWrite: false,
-    uniforms: {
-      tDiffuse: { value: postTarget.texture },
-      resolution: { value: new THREE.Vector2(1, 1) },
-      vignette: { value: storedNumber(RENDER_LS.vignette, 0.04, 0, 1) },
-      aaStrength: { value: renderSmoothing },
-      saturation: { value: storedNumber(RENDER_LS.saturation, 1.0, 0.8, 1.3) },
-      contrast: { value: storedNumber(RENDER_LS.contrast, 1.0, 0.85, 1.25) },
-      brightness: { value: storedNumber(RENDER_LS.brightness, 1.0, 0.75, 1.3) },
-      gamma: { value: storedNumber(RENDER_LS.gamma, 1.0, 0.6, 1.8) },
-      warmth: { value: storedNumber(RENDER_LS.warmth, 0, -0.08, 0.08) },
-    },
-    vertexShader: [
-      'varying vec2 vUv;',
-      'void main() {',
-      '  vUv = uv;',
-      '  gl_Position = vec4(position.xy, 0.0, 1.0);',
-      '}',
-    ].join('\n'),
-    fragmentShader: [
-      'uniform sampler2D tDiffuse;',
-      'uniform vec2 resolution;',
-      'uniform float vignette;',
-      'uniform float saturation;',
-      'uniform float contrast;',
-      'uniform float brightness;',
-      'uniform float gamma;',
-      'uniform float warmth;',
-      'uniform float aaStrength;',
-      'varying vec2 vUv;',
-      'void main() {',
-      '  vec2 texel = 1.0 / max(resolution, vec2(1.0));',
-      // Lightweight FXAA-style edge smoothing on the post-on path. We use
-      // the 4 diagonal corner taps both for luminance-based edge detection
-      // and for the on-edge blur, so the shader runs 5 texture reads per
-      // pixel instead of the 9-tap variant. Flat tile interiors stay sharp
-      // (edge=0 → mix returns cc unmodified); only silhouettes get blended.
-      '  vec4 cc = texture2D(tDiffuse, vUv);',
-      '  vec4 ne = texture2D(tDiffuse, vUv + texel);',
-      '  vec4 nw = texture2D(tDiffuse, vUv + vec2(-texel.x,  texel.y));',
-      '  vec4 se = texture2D(tDiffuse, vUv + vec2( texel.x, -texel.y));',
-      '  vec4 sw = texture2D(tDiffuse, vUv - texel);',
-      '  float lc = dot(cc.rgb, vec3(0.299, 0.587, 0.114));',
-      '  float lne = dot(ne.rgb, vec3(0.299, 0.587, 0.114));',
-      '  float lnw = dot(nw.rgb, vec3(0.299, 0.587, 0.114));',
-      '  float lse = dot(se.rgb, vec3(0.299, 0.587, 0.114));',
-      '  float lsw = dot(sw.rgb, vec3(0.299, 0.587, 0.114));',
-      '  float lmin = min(lc, min(min(lne, lnw), min(lse, lsw)));',
-      '  float lmax = max(lc, max(max(lne, lnw), max(lse, lsw)));',
-      '  float edge = clamp((lmax - lmin) * 3.0, 0.0, 1.0);',
-      '  vec4 aaSoft = (cc + ne + nw + se + sw) * 0.2;',
-      '  vec4 c = mix(cc, aaSoft, edge * aaStrength);',
-      '  vec3 col = c.rgb;',
-      '  float luma = dot(col, vec3(0.299, 0.587, 0.114));',
-      '  col = mix(vec3(luma), col, saturation);',
-      '  col = (col - 0.5) * contrast + 0.5;',
-      '  col *= brightness;',
-      '  col += vec3(warmth, warmth * 0.55, -warmth * 0.25);',
-      '  col = pow(max(col, vec3(0.0)), vec3(1.0 / max(gamma, 0.001)));',
-      '  float d = distance(vUv, vec2(0.5));',
-      '  col *= 1.0 - smoothstep(0.44, 0.84, d) * vignette;',
-      '  gl_FragColor = vec4(clamp(col, 0.0, 1.0), c.a);',
-      '}',
-    ].join('\n'),
-  });
-  postScene.add(new THREE.Mesh(new THREE.PlaneGeometry(2, 2), postMaterial));
-
-  function resizePostTarget(w, h) {
-    const pr = renderer.getPixelRatio();
-    const rw = Math.max(1, Math.floor(w * pr));
-    const rh = Math.max(1, Math.floor(h * pr));
-    postTarget.setSize(rw, rh);
-    postMaterial.uniforms.resolution.value.set(rw, rh);
-  }
-
   function setRenderResolutionScale(value) {
     renderResolutionScale = Math.max(0.55, Math.min(1.5, value));
     renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, BASE_DPR_CAP) * renderResolutionScale);
-    const { w, h } = stageSize();
-    resizePostTarget(w, h);
   }
 
   function setRenderVisibleDistance(value) {
@@ -3862,7 +3753,7 @@
   }
 
   function setRenderVisibleSize(value) {
-    renderVisibleSize = Math.max(8, Math.min(20, Math.round(value)));
+    renderVisibleSize = Math.max(8, Math.min(Math.round(HOME_GRID_MAX * 1.5), Math.round(value)));
     if (typeof ensureGhostBoardsAroundTarget === 'function') ensureGhostBoardsAroundTarget();
   }
 
@@ -3893,25 +3784,14 @@
     document.body.style.setProperty('--tilt-edge-bottom', Math.min(100, clearBottom + edge).toFixed(1) + '%');
   }
 
-  // Disable auto-reset so we can read renderer.info totals across both passes,
-  // then reset once per frame after the stats overlay samples them.
+  // Disable auto-reset so we can read renderer.info totals, then reset once
+  // per frame after the stats overlay samples them.
   renderer.info.autoReset = false;
 
   function renderScene() {
     renderer.info.reset();
-    if (!postProcessingEnabled) {
-      renderer.render(scene, camera);
-    } else {
-      renderer.setRenderTarget(postTarget);
-      renderer.render(scene, camera);
-      renderer.setRenderTarget(null);
-      renderer.render(postScene, postCamera);
-    }
+    renderer.render(scene, camera);
     if (statsOverlay) sampleStats();
-  }
-  {
-    const { w, h } = stageSize();
-    resizePostTarget(w, h);
   }
 
   // -------- stats overlay --------
@@ -9801,8 +9681,70 @@
     onResize();
   }, { passive: false });
 
+  const MODAL_FOCUS_SELECTOR = [
+    'a[href]',
+    'button:not([disabled])',
+    'textarea:not([disabled])',
+    'input:not([disabled])',
+    'select:not([disabled])',
+    '[tabindex]:not([tabindex="-1"])',
+  ].join(',');
+  function getFocusableInModal(modal) {
+    return Array.from(modal.querySelectorAll(MODAL_FOCUS_SELECTOR))
+      .filter(el => el.offsetParent !== null || el === document.activeElement);
+  }
+  function topOpenModal() {
+    const open = Array.from(document.querySelectorAll('.modal:not([hidden]), .auth-modal:not([hidden])'));
+    return open.length ? open[open.length - 1] : null;
+  }
+  function openTinyModal(modal, initialFocus) {
+    if (!modal) return;
+    modal.__returnFocus = document.activeElement && document.activeElement.focus ? document.activeElement : null;
+    modal.hidden = false;
+    const targetEl = initialFocus || getFocusableInModal(modal)[0] || modal.querySelector('[role="dialog"]') || modal;
+    if (targetEl && !targetEl.hasAttribute('tabindex') && targetEl === modal) targetEl.setAttribute('tabindex', '-1');
+    setTimeout(() => { try { targetEl && targetEl.focus && targetEl.focus(); } catch (_) {} }, 0);
+  }
+  function closeTinyModal(modal) {
+    if (!modal) return;
+    modal.hidden = true;
+    const returnFocus = modal.__returnFocus;
+    modal.__returnFocus = null;
+    if (returnFocus && returnFocus.isConnected && returnFocus.focus) {
+      setTimeout(() => { try { returnFocus.focus(); } catch (_) {} }, 0);
+    }
+  }
+  window.__openTinyModal = openTinyModal;
+  window.__closeTinyModal = closeTinyModal;
+  document.addEventListener('keydown', e => {
+    const modal = topOpenModal();
+    if (!modal) return;
+    if (e.key === 'Escape') {
+      e.preventDefault();
+      if (typeof modal.__closeModalHandler === 'function') modal.__closeModalHandler();
+      else closeTinyModal(modal);
+      return;
+    }
+    if (e.key !== 'Tab') return;
+    const focusable = getFocusableInModal(modal);
+    if (!focusable.length) {
+      e.preventDefault();
+      return;
+    }
+    const first = focusable[0];
+    const last = focusable[focusable.length - 1];
+    if (e.shiftKey && document.activeElement === first) {
+      e.preventDefault();
+      last.focus();
+    } else if (!e.shiftKey && document.activeElement === last) {
+      e.preventDefault();
+      first.focus();
+    }
+  }, true);
+
   function shortcutTargetBlocked(target) {
     if (!target) return false;
+    if (target.closest && target.closest('.modal:not([hidden]), .auth-modal:not([hidden])')) return true;
     const tag = target.tagName;
     return target.isContentEditable || tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT';
   }
@@ -9924,12 +9866,6 @@
   });
 
   function togglePerspective() {
-    if (postProcessingEnabled) {
-      // Post-processing pipeline is tuned for the isometric framing —
-      // perspective modes break the shader, so the toggle is locked.
-      setCameraMode('ortho');
-      return;
-    }
     const next = cameraMode === 'ortho' ? 'soft' : (cameraMode === 'soft' ? 'perspective' : 'ortho');
     setCameraMode(next);
   }
@@ -9962,10 +9898,7 @@
   // can return to a sensible angled view instead of getting stuck flat.
   let polarBeforeTopdown = null;
   function setCameraMode(mode) {
-    const requested = ['ortho', 'topdown', 'soft', 'perspective', 'fp'].includes(mode) ? mode : 'ortho';
-    // 'fp' (first-person walk) gates on post-processing the same way the
-    // other perspective modes do — post forces ortho.
-    const effective = postProcessingEnabled && requested !== 'topdown' ? 'ortho' : requested;
+    const effective = ['ortho', 'topdown', 'soft', 'perspective', 'fp'].includes(mode) ? mode : 'ortho';
     if (effective !== 'fp' && fp.active) exitFP();
     // 'topdown' is orthoCam with polar snapped to ~0 (straight down).
     // Internally we still store cameraMode='ortho' for everything that
@@ -9991,9 +9924,8 @@
            : persCam;
     const isTopdown = (effective === 'topdown') || (cameraMode === 'ortho' && polar < 0.05);
     perspBtn.classList.toggle('on', cameraMode !== 'ortho' || isTopdown);
-    perspBtn.classList.toggle('disabled', postProcessingEnabled);
+    perspBtn.classList.remove('disabled');
     perspBtn.setAttribute('data-tooltip',
-      postProcessingEnabled ? 'Isometric (locked — disable post-processing to change)' :
       isTopdown              ? 'Top-down (bird\'s eye)' :
       cameraMode === 'ortho' ? 'Isometric' :
       cameraMode === 'soft'  ? 'Soft perspective' :
@@ -10147,7 +10079,7 @@
 
   function resetCameraDefaults() {
     // Scale the default view to the current home board so the whole
-    // grid sits inside the frame regardless of size (8 / 12 / 16 / 20).
+    // grid sits inside the frame regardless of size (8 / 12 / 16 / 20 / 32 / 48).
     viewSize = DEFAULT_VIEW_SIZE * (GRID / HOME_GRID_DEFAULT);
     azimuth = DEFAULT_AZIMUTH;
     polar = DEFAULT_POLAR;
@@ -10155,7 +10087,7 @@
     setCameraMode(DEFAULT_CAMERA_MODE);
   }
 
-  // Resize the home board between the allowed presets (8 / 12 / 16 / 20).
+  // Resize the home board between the allowed presets (8 / 12 / 16 / 20 / 32 / 48).
   // World data outside the previous board is preserved in world[][] —
   // growing the grid brings those tiles into the home area (so the
   // existing 'outside home' grayscale is no longer applied to them).
@@ -10397,14 +10329,13 @@
   function confirmReset() {
     const modal = document.getElementById('confirm-reset-modal');
     if (!modal) { doReset(); return; }
-    modal.hidden = false;
     const okBtn = document.getElementById('confirm-reset-ok');
-    if (okBtn) okBtn.focus();
+    openTinyModal(modal, okBtn);
   }
   (function setupResetConfirm() {
     const modal = document.getElementById('confirm-reset-modal');
     if (!modal) return;
-    const close = () => { modal.hidden = true; };
+    const close = () => { closeTinyModal(modal); };
     const ok = document.getElementById('confirm-reset-ok');
     const cancel = document.getElementById('confirm-reset-cancel');
     const closeBtn = document.getElementById('confirm-reset-close');
@@ -10444,7 +10375,6 @@
     const status = document.getElementById('render-status');
     const shadowEl = document.getElementById('render-shadow');
     const resolutionEl = document.getElementById('render-resolution');
-    const smoothingEl = document.getElementById('render-smoothing');
     const distanceEl = document.getElementById('render-distance');
     const visibleSizeEl = document.getElementById('render-visible-size');
     const homeGridEl = document.getElementById('render-home-grid');
@@ -10462,7 +10392,6 @@
     const floorOpacityEl = document.getElementById('render-floor-opacity');
     const objectOpacityEl = document.getElementById('render-object-opacity');
     const resolutionValue = document.getElementById('render-resolution-value');
-    const smoothingValue = document.getElementById('render-smoothing-value');
     const distanceValue = document.getElementById('render-distance-value');
     const visibleSizeValue = document.getElementById('render-visible-size-value');
     const brightnessValue = document.getElementById('render-brightness-value');
@@ -10490,14 +10419,13 @@
     function syncControls() {
       shadowEl.value = renderShadowQuality;
       resolutionEl.value = String(Math.round(renderResolutionScale * 100));
-      smoothingEl.value = String(Math.round(renderSmoothing * 100));
       distanceEl.value = String(renderVisibleDistance);
       visibleSizeEl.value = String(renderVisibleSize);
       if (homeGridEl) homeGridEl.value = String(GRID);
-      brightnessEl.value = String(Math.round(postMaterial.uniforms.brightness.value * 100));
+      brightnessEl.value = String(Math.round(renderBrightness * 100));
       lightingEl.value = String(Math.round(renderLighting * 100));
-      saturationEl.value = String(Math.round(postMaterial.uniforms.saturation.value * 100));
-      contrastEl.value = String(Math.round(postMaterial.uniforms.contrast.value * 100));
+      saturationEl.value = String(Math.round(renderSaturation * 100));
+      contrastEl.value = String(Math.round(renderContrast * 100));
       cloudsEl.value = String(Math.round(renderCloudAmount * 100));
       cloudSpeedEl.value = String(Math.round(renderCloudSpeed * 100));
       cloudHeightEl.value = String(renderCloudHeight);
@@ -10508,7 +10436,6 @@
       floorOpacityEl.value = String(Math.round(renderFloorOpacity * 100));
       objectOpacityEl.value = String(Math.round(renderObjectOpacity * 100));
       resolutionValue.textContent = resolutionEl.value + '%';
-      smoothingValue.textContent = smoothingEl.value + '%';
       distanceValue.textContent = distanceEl.value;
       visibleSizeValue.textContent = visibleSizeEl.value + 'x' + visibleSizeEl.value;
       brightnessValue.textContent = brightnessEl.value + '%';
@@ -10529,13 +10456,12 @@
 
     function persistSettings() {
       localStorage.setItem(RENDER_LS.resolution, renderResolutionScale.toFixed(2));
-      localStorage.setItem(RENDER_LS.smoothing, renderSmoothing.toFixed(2));
       localStorage.setItem(RENDER_LS.visibleDistance, String(renderVisibleDistance));
       localStorage.setItem(RENDER_LS.visibleSize, String(renderVisibleSize));
-      localStorage.setItem(RENDER_LS.brightness, postMaterial.uniforms.brightness.value.toFixed(2));
+      localStorage.setItem(RENDER_LS.brightness, renderBrightness.toFixed(2));
       localStorage.setItem(RENDER_LS.lighting, renderLighting.toFixed(2));
-      localStorage.setItem(RENDER_LS.saturation, postMaterial.uniforms.saturation.value.toFixed(2));
-      localStorage.setItem(RENDER_LS.contrast, postMaterial.uniforms.contrast.value.toFixed(2));
+      localStorage.setItem(RENDER_LS.saturation, renderSaturation.toFixed(2));
+      localStorage.setItem(RENDER_LS.contrast, renderContrast.toFixed(2));
       localStorage.setItem(RENDER_LS.shadow, renderShadowQuality);
       localStorage.setItem(RENDER_LS.clouds, renderCloudAmount.toFixed(2));
       localStorage.setItem(RENDER_LS.cloudSpeed, renderCloudSpeed.toFixed(2));
@@ -10547,22 +10473,15 @@
     }
 
     function applyFromControls() {
-      // Post-processing is permanently off in this build. Brightness /
-      // saturation / contrast are applied to the canvas via CSS filter
-      // (see applyColorFilterFallback). The post uniforms are still
-      // written so any code that reads them stays consistent.
-      postProcessingEnabled = false;
       setShadowQuality(shadowEl.value);
       setRenderResolutionScale(parseInt(resolutionEl.value, 10) / 100);
-      renderSmoothing = parseInt(smoothingEl.value, 10) / 100;
-      postMaterial.uniforms.aaStrength.value = renderSmoothing;
       setRenderVisibleDistance(parseInt(distanceEl.value, 10));
       setRenderVisibleSize(parseInt(visibleSizeEl.value, 10));
-      postMaterial.uniforms.brightness.value = parseInt(brightnessEl.value, 10) / 100;
+      renderBrightness = parseInt(brightnessEl.value, 10) / 100;
       renderLighting = parseInt(lightingEl.value, 10) / 100;
       applyLightingSettings();
-      postMaterial.uniforms.saturation.value = parseInt(saturationEl.value, 10) / 100;
-      postMaterial.uniforms.contrast.value = parseInt(contrastEl.value, 10) / 100;
+      renderSaturation = parseInt(saturationEl.value, 10) / 100;
+      renderContrast = parseInt(contrastEl.value, 10) / 100;
       renderCloudAmount = parseInt(cloudsEl.value, 10) / 100;
       renderCloudSpeed = parseInt(cloudSpeedEl.value, 10) / 100;
       renderCloudHeight = parseFloat(cloudHeightEl.value);
@@ -10581,22 +10500,15 @@
       syncControls();
     }
 
-    // When post-processing is OFF, brightness / saturation / contrast still
-    // affect the look by way of a CSS filter applied directly to the WebGL
-    // canvas. The browser does the math at compositing time, so it costs
-    // effectively nothing and doesn't need the EffectComposer pipeline.
-    // When post is ON, the shader-based pass owns the colour transform and
-    // we clear the CSS filter to avoid stacking.
+    // Brightness / saturation / contrast affect the look by way of a CSS
+    // filter applied directly to the WebGL canvas. The browser does the math
+    // at compositing time, so this keeps the render path single-pass.
     function applyColorFilterFallback() {
       const el = renderer && renderer.domElement;
       if (!el) return;
-      if (postProcessingEnabled) {
-        el.style.filter = '';
-        return;
-      }
-      const b = (parseInt(brightnessEl.value, 10) || 100) / 100;
-      const s = (parseInt(saturationEl.value, 10) || 100) / 100;
-      const c = (parseInt(contrastEl.value, 10) || 100) / 100;
+      const b = renderBrightness;
+      const s = renderSaturation;
+      const c = renderContrast;
       // Only set the property when the value is non-trivial; saves a small
       // amount of compositor work in the all-neutral case.
       if (b === 1 && s === 1 && c === 1) {
@@ -10614,11 +10526,11 @@
       }
       syncControls();
       if (typeof window.__syncAiSettings === 'function') window.__syncAiSettings();
-      modal.hidden = false;
+      openTinyModal(modal, closeBtn);
     });
-    closeBtn.addEventListener('click', () => { modal.hidden = true; });
-    modal.addEventListener('click', e => { if (e.target === modal) modal.hidden = true; });
-    for (const el of [shadowEl, resolutionEl, smoothingEl, distanceEl, visibleSizeEl, brightnessEl, lightingEl, saturationEl, contrastEl, cloudsEl, cloudSpeedEl, cloudHeightEl, cloudShadowEl, tiltBlurEl, tiltFocusEl, ghostOpacityEl, floorOpacityEl, objectOpacityEl]) {
+    closeBtn.addEventListener('click', () => { closeTinyModal(modal); });
+    modal.addEventListener('click', e => { if (e.target === modal) closeTinyModal(modal); });
+    for (const el of [shadowEl, resolutionEl, distanceEl, visibleSizeEl, brightnessEl, lightingEl, saturationEl, contrastEl, cloudsEl, cloudSpeedEl, cloudHeightEl, cloudShadowEl, tiltBlurEl, tiltFocusEl, ghostOpacityEl, floorOpacityEl, objectOpacityEl]) {
       if (!el) continue;
       el.addEventListener('input', applyFromControls);
       el.addEventListener('change', applyFromControls);
@@ -10632,18 +10544,15 @@
       });
     }
     resetBtn.addEventListener('click', () => {
-      postProcessingEnabled = false;
       setShadowQuality('balanced');
       setRenderResolutionScale(1);
-      renderSmoothing = 0.7;
-      postMaterial.uniforms.aaStrength.value = renderSmoothing;
       setRenderVisibleDistance(2);
       setRenderVisibleSize(16);
-      postMaterial.uniforms.brightness.value = 1;
+      renderBrightness = 1;
       renderLighting = 1.34;
       applyLightingSettings();
-      postMaterial.uniforms.saturation.value = 1;
-      postMaterial.uniforms.contrast.value = 1;
+      renderSaturation = 1;
+      renderContrast = 1;
       renderCloudAmount = 0.61;
       renderCloudSpeed = 0.35;
       renderCloudHeight = 7;
@@ -10655,13 +10564,12 @@
       applyTiltShiftSettings();
       // ghost opacities already pinned to 1
       updateGhostRenderBubble();
+      applyColorFilterFallback();
       persistSettings();
       syncControls();
     });
-    window.addEventListener('keydown', e => {
-      if (e.key === 'Escape' && !modal.hidden) modal.hidden = true;
-    });
     syncControls();
+    applyColorFilterFallback();
   })();
 
   // -------- audio --------
@@ -11953,10 +11861,12 @@
     orthoCam.bottom = -viewSize;
     orthoCam.updateProjectionMatrix();
 
+    softCam.aspect = aspect;
+    softCam.updateProjectionMatrix();
+
     persCam.aspect = aspect;
     persCam.updateProjectionMatrix();
 
-    resizePostTarget(w, h);
     updateCamera();
     // Reposition fly-out if visible (anchored to the active tool button).
     const fl = document.getElementById('flyout');
@@ -13492,11 +13402,10 @@
       loadProviderState();
       promptEl.value = localStorage.getItem(AI_LS.prompt) || promptEl.value;
       setStatus('');
-      modal.hidden = false;
-      setTimeout(() => promptEl.focus(), 0);
+      openTinyModal(modal, promptEl);
     }
 
-    function close() { modal.hidden = true; }
+    function close() { closeTinyModal(modal); }
     openGenerateModal = msg => {
       open();
       if (msg) setStatus(msg, 'error');
@@ -14714,11 +14623,11 @@
     try { dismissedId = localStorage.getItem(WELCOME_LS_KEY); } catch (_) {}
     // Only show when the current notice hasn't been dismissed yet.
     if (dismissedId !== WELCOME_NOTICE_ID) {
-      modal.hidden = false;
+      openTinyModal(modal, startBtn || closeBtn);
     }
 
     function close() {
-      modal.hidden = true;
+      closeTinyModal(modal);
       try {
         if (dontShow && dontShow.checked) {
           localStorage.setItem(WELCOME_LS_KEY, WELCOME_NOTICE_ID);
@@ -14728,6 +14637,7 @@
         }
       } catch (_) {}
     }
+    modal.__closeModalHandler = close;
     closeBtn.addEventListener('click', close);
     startBtn.addEventListener('click', close);
     modal.addEventListener('click', e => {
@@ -14783,8 +14693,8 @@
     tabSaves.addEventListener('click', () => showTab('saves'));
     if (tabApi) tabApi.addEventListener('click', () => showTab('api'));
 
-    function openModal() { modal.hidden = false; }
-    function closeModal() { modal.hidden = true; }
+    function openModal() { openTinyModal(modal, closeBtn); }
+    function closeModal() { closeTinyModal(modal); }
     closeBtn.addEventListener('click', closeModal);
     modal.addEventListener('click', e => { if (e.target === modal) closeModal(); });
 
@@ -15081,23 +14991,23 @@
 
     function openLoginModal(reason) {
       clearMessages();
-      modal.hidden = false;
       const subtitle = modal.querySelector('.auth-subtitle');
       if (subtitle && reason) subtitle.textContent = reason;
       showForm('login');
+      openTinyModal(modal, document.getElementById('auth-email'));
     }
     // Expose to gated handlers outside this closure.
     window.__openLoginModal = openLoginModal;
 
     function enterApp() {
-      modal.hidden = true;
+      closeTinyModal(modal);
       setLoggedInState(true);
       bootApp();
       initAccountModal();
     }
 
     function enterAnonApp() {
-      modal.hidden = true;
+      closeTinyModal(modal);
       setLoggedInState(false);
       bootApp();
     }
@@ -15221,17 +15131,17 @@
             enterApp();
             return true;
           case 'recovery':
-            modal.hidden = false;
             showForm('reset');
+            openTinyModal(modal, document.getElementById('auth-reset-password'));
             return true;
           case 'invite':
-            modal.hidden = false;
             showSuccess('Set a password to accept your invite.');
             showForm('reset');
+            openTinyModal(modal, document.getElementById('auth-reset-password'));
             return true;
           case 'email_change':
-            modal.hidden = false;
             showSuccess('Email address updated.');
+            openTinyModal(modal, document.getElementById('auth-email'));
             return true;
         }
       } catch (err) {
@@ -15570,12 +15480,6 @@
         const opt = e.target.closest('.view-option');
         if (!opt) return;
         const target = opt.getAttribute('data-view');
-        // Post-processing forces ortho — surface this so the user
-        // understands why "First-person" / "Soft" don't take effect.
-        if (typeof postProcessingEnabled !== 'undefined' && postProcessingEnabled && target !== 'ortho') {
-          console.info('[view] Post-processing forces top-down. Disable Settings → Post FX to use other views.');
-          if (typeof showToast === 'function') showToast('Disable Post FX to use ' + target + ' view.');
-        }
         if (typeof setCameraMode === 'function') {
           try { setCameraMode(target); } catch (err) { console.warn('[view] setCameraMode failed:', err); }
         }
@@ -16158,7 +16062,7 @@
       // Top-bar buttons
       items.push({ group: 'Camera', label: 'Toggle perspective', hint: 'orbit vs orthographic', kbd: 'P', run: topBtnAction('persp') });
       items.push({ group: 'Camera', label: 'Pick camera view…', hint: 'top-down / soft / first-person', run: topBtnAction('view-modes') });
-      items.push({ group: 'Camera', label: 'Center on home grid', hint: 'frame the 8×8 board', kbd: 'H', run: topBtnAction('home') });
+      items.push({ group: 'Camera', label: 'Center on home grid', hint: 'frame the home board', kbd: 'H', run: topBtnAction('home') });
       // Terrain — raise/lower the hovered cell
       items.push({ group: 'Terrain', label: 'Raise terrain at cursor', hint: 'terrainFloors +1 (max 8)', kbd: 'R', run: () => {
         if (typeof window.__adjustHoverTerrainHeight === 'function') window.__adjustHoverTerrainHeight(+1);
@@ -16191,7 +16095,6 @@
       items.push({ group: 'Settings', label: 'Settings — Screen', run: settingsTab('screen') });
       items.push({ group: 'Settings', label: 'Settings — World',  run: settingsTab('world') });
       items.push({ group: 'Settings', label: 'Settings — Sky',    run: settingsTab('sky') });
-      items.push({ group: 'Settings', label: 'Settings — Post FX',run: settingsTab('post') });
       items.push({ group: 'Settings', label: 'Settings — AI',     run: settingsTab('ai') });
       if (window.TinyWorldAuth) {
         items.push({ group: 'Account', label: 'Open account / My Builds', run: topBtnAction('account-btn') });

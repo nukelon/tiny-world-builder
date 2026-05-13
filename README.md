@@ -13,9 +13,11 @@ python3 -m http.server 8000
 ## Deploy
 
 The app deploys to Vercel as a static site. `vercel.json` runs `./publish.sh`
-and serves the generated `dist/` directory.
+and serves the generated `dist/` directory. Three.js r128 and GLTFLoader are
+self-hosted from `vendor/three/` so deploys do not depend on runtime CDNs.
 
 ```bash
+npm test
 npm run build
 vercel deploy
 ```
@@ -69,6 +71,25 @@ A shared `dropAnims` queue ease-outs new tiles/objects into place. Other
 per-frame animations (tree sway, crop bob, smoke origin) check
 `obj.userData.landing` so they yield while a piece is still falling in.
 
+Newer systems are still routed through that same contract:
+
+- **Ghost boards** lazily generate and fade surrounding boards as the camera pans.
+- **AI generation / Auto** validate sparse v4 worlds against the embedded schema.
+- **Local world slots** keep multiple named saves in browser storage.
+- **Weather, time, clouds, and crop duster** are decorative scene systems layered on the same renderer.
+- **Command palette** indexes tools, views, settings, and terrain raise/lower actions.
+
+## Validation
+
+```bash
+npm test        # syntax, schema parity, local assets, static smoke checks
+npm run build   # publish checks + dist generation
+```
+
+Manual browser smoke checklist after visual changes: page loads with no console
+errors; place/erase works; `C`, `P`/`I`, `R`/`F`, and tool shortcuts respond;
+fence neighbors update; cloud shadow at 0% still leaves visible clouds.
+
 See [AGENTS.md](./AGENTS.md) for guidance on extending the codebase.
 
 ## Files
@@ -78,4 +99,7 @@ tiny-world-builder.html          the app
 README.md                        this file
 AGENTS.md                        guidance for AI coding agents
 world.schema.json                import/export schema mirrored into the app
+tools/check.js                   static syntax/schema/asset check
+tools/smoke-static.js            no-browser smoke guard for key app contracts
+vendor/three/                    self-hosted Three.js r128 runtime files
 ```

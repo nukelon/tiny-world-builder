@@ -5,10 +5,11 @@ Guidance for AI coding agents working in this repo. Read this before touching
 
 ## Project shape
 
-- One file: `tiny-world-builder.html`. Inline CSS in `<style>`, inline JS in a
-  single `<script>` block at the bottom. Three.js **r128** loaded from cdnjs.
-- No build, no bundler, no package manager, no tests. Edit the HTML, reload
-  the browser. That's the whole loop.
+- Main app: `tiny-world-builder.html`. Inline CSS in `<style>`, inline JS in a
+  single `<script>` block at the bottom. Three.js **r128** and GLTFLoader are
+  self-hosted under `vendor/three/` and copied to `dist/` by `publish.sh`.
+- No bundler and no npm runtime dependencies. Use `npm test` for static checks,
+  `npm run build` for dist generation, then reload the browser.
 - If a `tiny-world-builder BACKUP.html` snapshot exists, don't auto-update it.
 
 ## Repo-local skills
@@ -23,7 +24,7 @@ Guidance for AI coding agents working in this repo. Read this before touching
   - `.codex/skills/tinyworld-opacity-torch` — ghost boards, panning, opacity torch.
   - `.codex/skills/tinyworld-tile-variation` — repeat-click levels and terrain/object variation.
   - `.codex/skills/tinyworld-visual-qa` — browser checks and visual QA.
-  - `.codex/skills/tinyworld-render-performance` — post-processing, renderer, shadows, and GPU budget.
+  - `.codex/skills/tinyworld-render-performance` — renderer, shadows, clouds, and GPU budget.
   - `.codex/skills/tinyworld-lowpoly-world-prompt` — model prompting for coherent low-poly worlds.
   - `.codex/skills/tinyworld-lowpoly-stylized-3d` — low-poly/stylized 3D asset design, imports, materials, scale, and animation.
 
@@ -89,14 +90,15 @@ or you will desync intent from rendering.
   materials are shared. Per-particle smoke clones its material and disposes
   on death — follow that pattern if you ever need a unique material per
   instance.
-- Cameras: there are two (`orthoCam`, `persCam`) and `camera` is a reference
-  swapped by `togglePerspective()`. `updateCamera()` writes to both.
+- Cameras: `orthoCam`, `softCam`, and `persCam` exist; `camera` is a reference
+  swapped by `togglePerspective()` / `setCameraMode()`. `updateCamera()` writes
+  to all camera projections/positions as needed.
 
 ## Performance budget
 
-- Grid is `8x8 = 64` cells. Per-frame allocation is fine at this scale.
-- If you scale the grid, the mesh-rebuild-on-neighbor-change pattern will
-  start to matter — consider batching updates inside `setCell`.
+- Home grid starts at `8x8` but settings can expose up to `48x48`. Per-frame
+  allocation is fine at small sizes; at larger grids, preserve progressive
+  rendering and avoid broad synchronous rebuilds.
 
 ## Things to avoid
 
@@ -111,6 +113,7 @@ or you will desync intent from rendering.
 
 ## Quick checks before declaring done
 
+- [ ] `npm test` passes.
 - [ ] Page loads with no console errors.
 - [ ] Tool keyboard shortcuts (`1`–`9`, `E`) still work.
 - [ ] `R` / `F` raise and lower the hovered terrain; reset button restores the

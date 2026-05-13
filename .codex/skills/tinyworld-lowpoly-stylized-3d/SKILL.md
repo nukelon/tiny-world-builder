@@ -8,7 +8,7 @@ description: Use when adding, importing, designing, reviewing, or animating low-
 Use this together with:
 
 - Project skill `.codex/skills/tinyworld-single-file/SKILL.md` for single-file constraints.
-- Project skill `.codex/skills/tinyworld-render-performance/SKILL.md` for GPU/shadow/post-processing limits.
+- Project skill `.codex/skills/tinyworld-render-performance/SKILL.md` for GPU/shadow/renderer limits.
 - Installed skill `.agents/skills/3d-modeling/SKILL.md` for topology, UV, export, LOD, and GLB hygiene.
 - Installed skill `.agents/skills/poly-pizza-api/SKILL.md` when sourcing low-poly models from Poly Pizza.
 - Installed skill `.agents/skills/lightweight-3d-effects/SKILL.md` when adding decorative lightweight 3D effects.
