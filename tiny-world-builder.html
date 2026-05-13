@@ -11534,7 +11534,7 @@
     const geo = new THREE.RingGeometry(size * 0.28, size * 0.62, 18);
     geo.rotateX(-Math.PI / 2);
     const mat = new THREE.MeshBasicMaterial({
-      color, transparent: true, opacity, depthWrite: false, depthTest: false, side: THREE.DoubleSide,
+      color, transparent: true, opacity, depthWrite: false, depthTest: true, side: THREE.DoubleSide,
       polygonOffset: true, polygonOffsetFactor: -4, polygonOffsetUnits: -4,
     });
     const mesh = new THREE.InstancedMesh(geo, mat, count);
@@ -11576,10 +11576,10 @@
   function makeWeatherBuildPool(count, { color, size, opacity, shape = 'square' }) {
     const geo = shape === 'circle'
       ? new THREE.CircleGeometry(size * 0.5, 18)
-      : new THREE.BoxGeometry(size, 0.012, size);
-    if (shape === 'circle') geo.rotateX(-Math.PI / 2);
+      : new THREE.PlaneGeometry(size, size);
+    geo.rotateX(-Math.PI / 2);
     const mat = new THREE.MeshBasicMaterial({
-      color, transparent: true, opacity, depthWrite: false, depthTest: false, side: THREE.DoubleSide,
+      color, transparent: true, opacity, depthWrite: false, depthTest: true, side: THREE.DoubleSide,
       polygonOffset: true, polygonOffsetFactor: -4, polygonOffsetUnits: -4,
     });
     const mesh = new THREE.InstancedMesh(geo, mat, count);
