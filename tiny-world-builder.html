@@ -1086,6 +1086,7 @@
     align-items: center;
     gap: 8px;
     padding: 8px;
+    transition: border-color 0.18s ease, box-shadow 0.18s ease;
   }
   .agent-input.has-target {
     grid-template-columns: 34px minmax(86px, auto) minmax(120px, 1fr) 40px;
@@ -1095,25 +1096,30 @@
 
   /* Pulse border when the agent is thinking / generating */
   .agent-input.busy {
-    animation: agent-input-pulse 2.2s ease-in-out infinite;
+    border-color: rgba(214, 169, 59, 0.92);
+    animation: agent-input-pulse 1.15s ease-in-out infinite;
   }
 
   @keyframes agent-input-pulse {
     0%, 100% {
       box-shadow:
+        0 0 0 2px rgba(214, 169, 59, 0.54),
         0 1px 0 rgba(255, 255, 255, 0.85) inset,
         0 -1px 0 rgba(120, 130, 150, 0.10) inset,
-        0 1px 2px rgba(20, 30, 50, 0.05),
-        0 12px 36px -12px rgba(40, 50, 80, 0.22),
-        0 0 0 0 rgba(160, 132, 84, 0.45);
+        0 1px 2px rgba(20, 30, 50, 0.06),
+        0 14px 38px -12px rgba(40, 50, 80, 0.24),
+        0 0 0 0 rgba(214, 169, 59, 0.52),
+        0 0 34px rgba(214, 169, 59, 0.18);
     }
     50% {
       box-shadow:
+        0 0 0 2px rgba(214, 169, 59, 0.78),
         0 1px 0 rgba(255, 255, 255, 0.85) inset,
         0 -1px 0 rgba(120, 130, 150, 0.10) inset,
-        0 1px 2px rgba(20, 30, 50, 0.05),
-        0 12px 36px -12px rgba(40, 50, 80, 0.22),
-        0 0 0 10px rgba(160, 132, 84, 0);
+        0 1px 2px rgba(20, 30, 50, 0.06),
+        0 18px 44px -12px rgba(40, 50, 80, 0.28),
+        0 0 0 15px rgba(214, 169, 59, 0),
+        0 0 48px rgba(214, 169, 59, 0.32);
     }
   }
   body.tool-flyout-open .agent-input {
