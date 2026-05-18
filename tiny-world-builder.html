@@ -5117,9 +5117,12 @@
   sun.shadow.camera.bottom = -SHADOW_HALF;
   sun.shadow.camera.near = 0.5;
   sun.shadow.camera.far = 60;
-  sun.shadow.bias = -0.00025;
-  sun.shadow.normalBias = 0.02;
-  sun.shadow.radius = 5;
+  // Keep shadow offsets tight for small voxel pieces. Larger normalBias/radius
+  // values reduce acne, but they also detach shadows from thin roofs, columns,
+  // crop stems, and voxel trim so the sun appears to leak through edges.
+  sun.shadow.bias = -0.00018;
+  sun.shadow.normalBias = 0.007;
+  sun.shadow.radius = 2.5;
   scene.add(sun);
   scene.add(sun.target);
   sun.target.position.copy(target);
@@ -5165,7 +5168,7 @@
     sun.shadow.mapSize.set(size, size);
     // Use filtered shadows at every quality level. BasicShadowMap makes the
     // low-poly/isometric shadows stair-step harshly, especially in pixel mode.
-    sun.shadow.radius = renderShadowQuality === 'high' ? 7 : (renderShadowQuality === 'low' ? 3 : 5);
+    sun.shadow.radius = renderShadowQuality === 'high' ? 4 : (renderShadowQuality === 'low' ? 1.25 : 2.5);
     renderer.shadowMap.type = renderShadowQuality === 'low' ? THREE.PCFShadowMap : THREE.PCFSoftShadowMap;
     if (sun.shadow.map) {
       sun.shadow.map.dispose();
@@ -5580,9 +5583,15 @@
   function castReceive(obj) {
     obj.traverse(c => {
       if (c.isMesh) {
-        c.castShadow = true;
-        c.receiveShadow = c.material !== M.wallCream;
+        if (c.userData && c.userData.noShadow) {
+          c.castShadow = false;
+          c.receiveShadow = false;
+        } else {
+          c.castShadow = true;
+          c.receiveShadow = c.material !== M.wallCream;
+        }
         c.frustumCulled = true;
+        configureShadowSide(c.material);
       }
     });
     return obj;
@@ -5597,6 +5606,21 @@
       }
     });
     return obj;
+  }
+
+  function configureShadowSide(material) {
+    const mats = Array.isArray(material) ? material : [material];
+    mats.forEach(mat => {
+      if (!mat || !mat.isMaterial) return;
+      // Three's default shadow pass may render the opposite side for FrontSide
+      // materials. That is good for closed meshes, but our roofs, trim, fences,
+      // and voxel details often use thin one-sided geometry, so the opposite
+      // side can disappear from the shadow map and create light leaks.
+      if (mat.side === THREE.FrontSide && mat.shadowSide !== THREE.FrontSide) {
+        mat.shadowSide = THREE.FrontSide;
+        mat.needsUpdate = true;
+      }
+    });
   }
 
   function cellRand(x, z, salt) {
@@ -5669,10 +5693,10 @@
     if (terrain === 'dirt') {
       return {
         base: M.dirtRich,
-        hi: terrainShadeMaterial(M.dirt, 12),
+        hi: terrainShadeMaterial(M.dirtRich, 18),
         low: M.dirtRich,
         edge: terrainShadeMaterial(M.dirtRich, -16),
-        scuff: terrainShadeMaterial(M.dirt, -8),
+        scuff: terrainShadeMaterial(M.dirtRich, 8),
       };
     }
     if (terrain === 'stone') {
@@ -5727,6 +5751,8 @@
       ? explicitCells
       : ((terrain === 'path' || terrain === 'water' || terrain === 'dirt') ? 8 : 6);
     const cellSize = topSize / cells;
+    const panelOverlap = Math.min(0.014, Math.max(0.006, cellSize * 0.06));
+    const panelSize = cellSize + panelOverlap;
     const half = topSize * 0.5;
     const y = rise + topHeight * 0.5;
     const buckets = new Map();
@@ -5768,9 +5794,9 @@
           mat = mats.scuff;
         }
         const panelGeo = getOpenBoxGeometry(
-          cellSize,
+          panelSize,
           topHeight,
-          cellSize,
+          panelSize,
           false,
           true,
           !atE || (hiddenSides && hiddenSides.e),
@@ -5876,6 +5902,10 @@
         const riser = new THREE.Mesh(dirtGeo, M.dirt);
         riser.position.y = -DIRT_H + (DIRT_H + rise) * 0.5;
         g.add(riser);
+        const bottom = new THREE.Mesh(getOpenBoxGeometry(riserSize, 0.012, riserSize, false, true, true, true, true, true), M.dirt);
+        bottom.position.y = -DIRT_H - 0.006;
+        bottom.userData.noShadow = true;
+        g.add(bottom);
       } else {
         let riserMat = M.dirt;
         if (terrain === 'path')  riserMat = M.pathTrim;
@@ -5890,6 +5920,10 @@
         const riser = new THREE.Mesh(riserGeo, riserMat);
         riser.position.y = -DIRT_H + (DIRT_H + rise) * 0.5;
         g.add(riser);
+        const bottom = new THREE.Mesh(getOpenBoxGeometry(riserSize, 0.012, riserSize, false, true, true, true, true, true), riserMat);
+        bottom.position.y = -DIRT_H - 0.006;
+        bottom.userData.noShadow = true;
+        g.add(bottom);
       }
 
       let topMat = M.grass;
