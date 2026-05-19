@@ -127,11 +127,11 @@
      relocate it into the toolbar's world-slot; not visible here. */
   .brand #world-menu-btn { display: none; }
 
-  /* Icon pill — sits top-right; the minimap stacks beneath it. */
+  /* Icon pill — sits bottom-left. */
   .appbar {
     position: fixed;
-    top: 24px;
-    right: 24px;
+    bottom: 24px;
+    left: 24px;
     z-index: 14;
     display: inline-flex;
     align-items: center;
@@ -1211,7 +1211,8 @@
   .agent-suggestion-chip:hover { background: rgba(255, 255, 255, 0.85); }
   .agent-suggestion-chip:active { transform: translateY(1px); }
   .agent-send,
-  .agent-panel-toggle {
+  .agent-panel-toggle,
+  .agent-panel-clear {
     border: 1px solid rgba(255, 255, 255, 0.55);
     background: rgba(255, 255, 255, 0.45);
     color: var(--ink);
@@ -1226,7 +1227,8 @@
     transition: background 0.12s, border-color 0.12s;
   }
   .agent-send:hover,
-  .agent-panel-toggle:hover {
+  .agent-panel-toggle:hover,
+  .agent-panel-clear:hover {
     background: rgba(255, 255, 255, 0.68);
     border-color: rgba(255, 255, 255, 0.75);
   }
@@ -1498,6 +1500,67 @@
     font-size: 11px;
     color: var(--muted);
     font-style: italic;
+  }
+
+  /* Tabbed selection: Preview / Details switch (one pane visible at a time) */
+  .selection-tabbar {
+    display: inline-flex;
+    background: rgba(255,255,255,0.45);
+    border-radius: 999px;
+    padding: 2px;
+    margin-bottom: 8px;
+  }
+  .selection-tab {
+    font-size: 11px;
+    font-weight: 600;
+    padding: 4px 14px;
+    border: none;
+    background: transparent;
+    color: var(--muted);
+    border-radius: 999px;
+    cursor: pointer;
+    transition: all 0.1s ease;
+  }
+  .selection-tab.active {
+    background: #fff;
+    color: var(--ink);
+    box-shadow: 0 1px 2px rgba(20,30,50,0.1);
+  }
+  .selection-tab-content { display: none; }
+  .selection-tab-content.active { display: block; }
+  .selection-preview-pane {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+  }
+  .selection-preview-pane {
+    width: 100%;
+  }
+  .selection-preview-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    margin-top: 8px;
+    justify-content: center;
+  }
+  .selection-preview-actions .selection-prop-chip {
+    font-size: 10px;
+    padding: 2px 8px;
+    min-height: 20px;
+  }
+  .selection-preview-pane canvas {
+    width: 100% !important;
+    height: auto !important;
+    aspect-ratio: 1 / 1;
+    display: block;
+    border-radius: 10px;
+    background: rgba(255,255,255,0.35);
+    border: 1px solid rgba(255,255,255,0.5);
+    box-shadow: 0 1px 2px rgba(20,30,50,0.08);
+  }
+  .selection-details-pane {
+    min-width: 0;
   }
   .agent-panel.has-selection .agent-messages { display: none; }
   .agent-panel-toggle {
@@ -2081,6 +2144,11 @@
     color: var(--muted);
     font-variant-numeric: tabular-nums;
   }
+  .minimap-toggle {
+    font-size: 11px; line-height: 1; padding: 0 3px; margin-left: 4px;
+    border: none; background: transparent; color: var(--muted); cursor: pointer;
+  }
+  .minimap-toggle:hover { color: var(--ink); }
   .minimap-autoexpand {
     display: flex;
     align-items: center;
@@ -2841,6 +2909,63 @@
     flex: 1;
     min-width: 0;
   }
+  .stamp-creative-panel {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 8px;
+    align-items: start;
+    margin-bottom: 12px;
+  }
+  .stamp-creative-panel textarea {
+    width: 100%;
+    min-height: 58px;
+    resize: vertical;
+    border: 1px solid rgba(68, 48, 24, 0.15);
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.64);
+    color: var(--ink);
+    font: inherit;
+    font-size: 13px;
+    line-height: 1.35;
+    padding: 9px 10px;
+    box-shadow: 0 1px 0 rgba(255, 255, 255, 0.7) inset;
+  }
+  .stamp-creative-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .visually-hidden-file {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    opacity: 0;
+    pointer-events: none;
+    overflow: hidden;
+  }
+  .stamp-image-strip {
+    grid-column: 1 / -1;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-height: 42px;
+  }
+  .stamp-image-strip img {
+    width: 48px;
+    height: 36px;
+    object-fit: cover;
+    border-radius: 6px;
+    border: 1px solid rgba(68, 48, 24, 0.16);
+    background: rgba(255, 255, 255, 0.5);
+  }
+  .stamp-image-name {
+    color: var(--muted);
+    font-size: 12px;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
   @media (max-width: 700px) {
     .settings-layout { grid-template-columns: 1fr; }
     .settings-tabs {
@@ -3380,6 +3505,7 @@
       <div class="minimap-foot">
         <span id="minimap-size">8×8</span>
         <span id="minimap-fps" data-tooltip="Frames per second">60 fps</span>
+        <button type="button" class="minimap-toggle" id="minimap-toggle" aria-label="Toggle map" title="Hide/show map (N)">–</button>
       </div>
       <label class="minimap-autoexpand" for="minimap-autoexpand">
         <span>Autoexpand</span>
@@ -4182,7 +4308,20 @@
         <strong id="stamp-builder-title">Stamp builder</strong>
         <button class="modal-close" id="stamp-builder-close" title="Close">×</button>
       </div>
-      <p class="modal-copy">Preview, select, and refresh voxel stamp builds. Building enhancement will plug into this workshop.</p>
+      <p class="modal-copy">Preview, select, generate, and refresh voxel stamp builds.</p>
+      <input id="voxel-build-image-file" class="visually-hidden-file" type="file" accept="image/png,image/jpeg,image/webp" />
+      <div class="stamp-creative-panel">
+        <textarea id="voxel-build-prompt" placeholder="Describe a voxel stamp..."></textarea>
+        <div class="stamp-creative-actions">
+          <button class="btn" id="voxel-build-create" type="button">Create</button>
+          <label class="btn" id="voxel-build-image" for="voxel-build-image-file">Choose image</label>
+        </div>
+        <div class="stamp-image-strip" id="voxel-build-image-strip" hidden>
+          <img id="voxel-build-image-preview" alt="" />
+          <span class="stamp-image-name" id="voxel-build-image-name"></span>
+          <button class="btn" id="voxel-build-image-clear" type="button">Clear image</button>
+        </div>
+      </div>
       <input id="voxel-build-import-file" type="file" accept=".json,application/json" hidden />
       <div class="modal-tools" style="display:flex;gap:8px;flex-wrap:wrap;margin:0 0 12px;">
         <button class="btn" id="voxel-build-import" type="button">Import build JSON</button>
@@ -4202,13 +4341,28 @@
   <div id="agent-panel" class="agent-panel" data-ai-interface aria-live="polite">
     <div class="agent-panel-head">
       <span id="agent-panel-title">Agent conversation</span>
+      <button type="button" class="agent-panel-clear" id="agent-panel-clear" aria-label="Clear conversation">⌫</button>
       <button type="button" class="agent-panel-toggle" id="agent-panel-toggle" aria-label="Close conversation">×</button>
     </div>
     <div class="agent-selection-preview" id="agent-selection-preview" hidden>
-      <div class="agent-selection-count" id="agent-selection-count">0 tiles selected</div>
-      <ul class="agent-selection-list" id="agent-selection-list"></ul>
-      <div class="agent-selection-properties" id="agent-selection-properties" hidden></div>
-      <div class="agent-selection-hint">Type above and the prompt will target this selection.</div>
+      <div class="selection-tabbar">
+        <button type="button" class="selection-tab active" data-tab="preview">Preview</button>
+        <button type="button" class="selection-tab" data-tab="details">Details</button>
+      </div>
+      <div class="selection-tab-content active" data-content="preview">
+        <div class="selection-preview-pane">
+          <canvas id="selection-preview-canvas" width="128" height="128"></canvas>
+          <div class="selection-preview-actions" id="selection-preview-actions"></div>
+        </div>
+      </div>
+      <div class="selection-tab-content" data-content="details">
+        <div class="selection-details-pane">
+          <div class="agent-selection-count" id="agent-selection-count">0 tiles selected</div>
+          <ul class="agent-selection-list" id="agent-selection-list"></ul>
+          <div class="agent-selection-properties" id="agent-selection-properties" hidden></div>
+          <div class="agent-selection-hint">Type above and the prompt will target this selection.</div>
+        </div>
+      </div>
     </div>
     <div class="agent-messages" id="agent-messages"></div>
   </div>
@@ -17722,11 +17876,171 @@
     }, stamp.name + ' enhanced');
   }
 
+  function creativeVoxelStampName(prompt, hasImage) {
+    const text = String(prompt || '').trim().replace(/\s+/g, ' ');
+    if (!text) return hasImage ? 'Image voxel stamp' : 'Voxel stamp';
+    return text.slice(0, 34).replace(/[^\w\s-]/g, '').trim() || 'Voxel stamp';
+  }
+
+  function readImageFileForVoxelReference(file) {
+    return new Promise((resolve, reject) => {
+      if (!file || !/^image\//i.test(file.type || '')) {
+        reject(new Error('Choose an image file'));
+        return;
+      }
+      const reader = new FileReader();
+      reader.onerror = () => reject(new Error('Could not read image'));
+      reader.onload = () => {
+        const img = new Image();
+        img.onerror = () => reject(new Error('Could not decode image'));
+        img.onload = () => {
+          const maxSide = 1536;
+          const scale = Math.min(1, maxSide / Math.max(img.naturalWidth || img.width, img.naturalHeight || img.height, 1));
+          const w = Math.max(1, Math.round((img.naturalWidth || img.width) * scale));
+          const h = Math.max(1, Math.round((img.naturalHeight || img.height) * scale));
+          const canvas = document.createElement('canvas');
+          canvas.width = w;
+          canvas.height = h;
+          const ctx = canvas.getContext('2d');
+          ctx.fillStyle = '#ffffff';
+          ctx.fillRect(0, 0, w, h);
+          ctx.drawImage(img, 0, 0, w, h);
+          resolve(canvas.toDataURL('image/jpeg', 0.92));
+        };
+        img.src = String(reader.result || '');
+      };
+      reader.readAsDataURL(file);
+    });
+  }
+
+  async function createCreativeVoxelBuildStamp(prompt, imageDataUrl) {
+    const instructionText = String(prompt || '').trim();
+    if (!instructionText && !imageDataUrl) throw new Error('Add a prompt or choose an image first');
+    const ai = getAIProviderState();
+    const provider = ai.provider || 'openai';
+    const def = AI_DEFAULTS[provider] || AI_DEFAULTS.openai;
+    const allowedMaterials = Object.keys(VOXEL_PART_COLORS);
+    const isLocalHost = /^(localhost|127\.0\.0\.1|\[::1\])$/.test(window.location.hostname);
+    const useLocalEndpoint = isLocalHost && (provider === 'openai' || !ai.key || imageDataUrl);
+    const model = textModelForGeneration(provider, ai.model);
+    const fallbackName = creativeVoxelStampName(instructionText, !!imageDataUrl);
+    const allowedBounds = { minX: -1.45, maxX: 1.45, minY: 0, maxY: 4.4, minZ: -1.45, maxZ: 1.45 };
+    const payload = {
+      model,
+      reasoningEffort: 'low',
+      reasoningSummary: 'off',
+      textVerbosity: 'low',
+      maxOutputTokens: 16000,
+      allowedMaterials,
+      selectedObject: {
+        id: 'creative-stamp-' + Date.now().toString(36),
+        stamp: 'creative',
+        label: fallbackName,
+        position: [0, 0, 0],
+        rotation: 0,
+        scale: [1, 1, 1],
+      },
+      desiredScale: [1, 1, 1],
+      style: [
+        'Tiny World voxel stamp, readable low-poly diorama asset, semantic custom parts first',
+        'large enough to show small details, no flat placeholder mass, no detached floating decoration',
+        'use the allowed material palette and keep the result inside the selected-tile footprint',
+      ].join(', '),
+      instruction: [
+        'Create a new original voxel stamp from the prompt and optional image reference.',
+        'Prefer semantic customParts over raw cube clouds so roof, body, windows, branches, rocks, crop rows, trim, base, and props remain editable.',
+        'Use layered small parts, trim bands, windows, doors, stems, stones, leaves, supports, rails, and base details when appropriate.',
+        'Keep the asset compact, grounded, centered, and recognizable from the isometric camera.',
+        'Do not copy Japanese garden or pagoda styling unless requested.',
+        instructionText ? 'User prompt: ' + instructionText : 'Use the image as the primary reference.',
+      ].join('\n'),
+      renderFootprint: 1.85,
+      sourceParts: [],
+      sourceCustomParts: [],
+      sourceBounds: null,
+      allowedBounds,
+      imageDataUrl: imageDataUrl || null,
+    };
+    postAiDebugLog({
+      kind: 'creative-stamp-before',
+      instruction: instructionText,
+      imageAttached: !!imageDataUrl,
+      payload,
+    });
+    let result = null;
+    if (useLocalEndpoint) {
+      const r = await fetch('/api/reinterpret-stamp', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify(Object.assign({}, payload, {
+          model: provider === 'openai' ? model : AI_DEFAULTS.openai.model,
+        })),
+      });
+      const text = await r.text();
+      try { result = text ? JSON.parse(text) : null; } catch (_) {}
+      if (!r.ok || !result || !result.ok) throw new Error((result && result.error) || text.slice(0, 180) || 'AI create failed');
+    } else {
+      if (imageDataUrl) throw new Error('Image references need the local dev server endpoint');
+      if (!ai.key) throw new Error('AI key missing');
+      const schema = customPartsEnhanceSchema(allowedMaterials);
+      const system = [
+        'You generate original geometry for a Three.js voxel stamp builder.',
+        'Return ONLY valid JSON, no markdown.',
+        'The JSON shape must be {"customParts":[...], "notes":"short optional note"}.',
+        'Use customParts with box/cylinder/cone, material, size [x,y,z], pos [x,y,z], scale [1,1,1].',
+        'Create a high-quality Tiny World stamp with semantic editable parts, not a single block or noisy cube cloud.',
+        'Keep all returned parts inside allowedBounds.',
+        'Use only allowed materials. Keep the object grounded and centered.',
+        'Do not introduce Japanese, pagoda, temple, shrine, torii, sakura, or garden styling unless explicitly requested.',
+        '',
+        'Schema:',
+        JSON.stringify(schema),
+      ].join('\n');
+      const raw = provider === 'anthropic'
+        ? await callAnthropic(def.endpoint, ai.key, model, system, JSON.stringify(payload), { name: 'emit_creative_stamp', schema })
+        : provider === 'gemini'
+          ? await callGemini(def.endpoint, ai.key, model, system, JSON.stringify(payload))
+          : await callOpenAI(def.endpoint, ai.key, model, system, JSON.stringify(payload));
+      result = extractJSON(raw);
+      if (!result) throw new Error('AI returned non-JSON');
+    }
+    const customParts = fitCustomPartsToBounds(result.customParts || result.parts || result.response?.customParts, allowedBounds);
+    if (!customParts.length) throw new Error('AI returned no customParts');
+    const stamp = normalizeVoxelBuildStamp({
+      id: 'creative-' + Date.now().toString(36),
+      name: creativeVoxelStampName(result.name || fallbackName, !!imageDataUrl),
+      customParts,
+      footprint: 1.85,
+      custom: true,
+    }, fallbackName);
+    postAiDebugLog({
+      kind: 'creative-stamp-after',
+      instruction: instructionText,
+      imageAttached: !!imageDataUrl,
+      stamp: stamp ? {
+        id: stamp.id,
+        name: stamp.name,
+        footprint: stamp.footprint,
+        customPartCount: stamp.customParts.length,
+        bounds: customPartsBounds(stamp.customParts),
+      } : null,
+    });
+    return stamp;
+  }
+
   (function setupStampBuilder() {
     const modal = document.getElementById('stamp-builder-modal');
     const openBtn = document.getElementById('stamp-builder');
     const closeBtn = document.getElementById('stamp-builder-close');
     const rebuildBtn = document.getElementById('stamp-builder-rebuild');
+    const createBtn = document.getElementById('voxel-build-create');
+    const promptEl = document.getElementById('voxel-build-prompt');
+    const imageBtn = document.getElementById('voxel-build-image');
+    const imageFile = document.getElementById('voxel-build-image-file');
+    const imageClearBtn = document.getElementById('voxel-build-image-clear');
+    const imageStrip = document.getElementById('voxel-build-image-strip');
+    const imagePreview = document.getElementById('voxel-build-image-preview');
+    const imageName = document.getElementById('voxel-build-image-name');
     const importBtn = document.getElementById('voxel-build-import');
     const importFile = document.getElementById('voxel-build-import-file');
     const upscaleBtn = document.getElementById('voxel-build-upscale');
@@ -17734,6 +18048,7 @@
     const useSelectedBtn = document.getElementById('voxel-build-use-selected');
     const enhanceSelectedBtn = document.getElementById('voxel-build-enhance-selected');
     const status = document.getElementById('stamp-builder-status');
+    let creativeImageDataUrl = '';
     if (!modal || !openBtn || !closeBtn) return;
     function open() {
       renderStampBuilderCards();
@@ -17744,6 +18059,57 @@
     openBtn.addEventListener('click', open);
     closeBtn.addEventListener('click', close);
     modal.addEventListener('click', e => { if (e.target === modal) close(); });
+    function setCreativeImage(dataUrl, name) {
+      creativeImageDataUrl = dataUrl || '';
+      if (imagePreview) {
+        if (creativeImageDataUrl) imagePreview.src = creativeImageDataUrl;
+        else imagePreview.removeAttribute('src');
+      }
+      if (imageName) imageName.textContent = creativeImageDataUrl ? (name || 'Reference image') : '';
+      if (imageStrip) imageStrip.hidden = !creativeImageDataUrl;
+    }
+    if (imageBtn && imageFile) {
+      imageFile.addEventListener('change', async () => {
+        const file = imageFile.files && imageFile.files[0];
+        imageFile.value = '';
+        if (!file) return;
+        try {
+          if (status) status.textContent = 'Preparing image...';
+          const dataUrl = await readImageFileForVoxelReference(file);
+          setCreativeImage(dataUrl, file.name);
+          if (status) status.textContent = 'Image ready';
+        } catch (err) {
+          setCreativeImage('', '');
+          if (status) status.textContent = 'Image failed: ' + String(err.message || err).slice(0, 100);
+        }
+      });
+    }
+    if (imageClearBtn) {
+      imageClearBtn.addEventListener('click', () => {
+        setCreativeImage('', '');
+        if (status) status.textContent = 'Image cleared';
+      });
+    }
+    if (createBtn) {
+      createBtn.addEventListener('click', async () => {
+        createBtn.disabled = true;
+        if (status) status.textContent = 'Creating voxel stamp...';
+        try {
+          const stamp = await createCreativeVoxelBuildStamp(promptEl ? promptEl.value : '', creativeImageDataUrl);
+          if (!stamp) throw new Error('No stamp returned');
+          VOXEL_BUILD_STAMPS.push(stamp);
+          saveCustomVoxelBuildStamps();
+          selectedVoxelBuildId = stamp.id;
+          renderStampBuilderCards();
+          selectTool({ id: 'voxel-build:' + stamp.id, label: stamp.name, kind: 'voxel-build', voxelBuildId: stamp.id, isVoxelBuild: true });
+          if (status) status.textContent = 'Created ' + stamp.name;
+        } catch (err) {
+          if (status) status.textContent = 'Create failed: ' + String(err.message || err).slice(0, 120);
+        } finally {
+          createBtn.disabled = false;
+        }
+      });
+    }
     if (rebuildBtn) {
       rebuildBtn.addEventListener('click', () => {
         rebuildVoxelStampRender();
@@ -19882,11 +20248,13 @@
       ],
     },
     gemini: {
-      model: 'gemini-3.1-pro',
+      model: 'gemini-1.5-flash-latest',
       endpoint: 'https://generativelanguage.googleapis.com/v1beta/models',
       models: [
-        'gemini-3.1-pro',
-        'gemini-3.1-flash',
+        'gemini-1.5-pro-latest',
+        'gemini-1.5-flash-latest',
+        'gemini-2.0-flash',
+        'gemini-2.0-flash-lite',
       ],
     },
   };
@@ -20272,7 +20640,8 @@
   }
 
   async function callGemini(endpoint, key, model, system, user) {
-    const safeModel = encodeURIComponent(model || AI_DEFAULTS.gemini.model);
+    const m = model || AI_DEFAULTS.gemini.model;
+    const safeModel = encodeURIComponent(m);
     const url = `${endpoint}/${safeModel}:generateContent?key=${encodeURIComponent(key)}`;
     const r = await fetch(url, {
       method: 'POST',
@@ -21550,6 +21919,22 @@
       updatePanelHandleVisibility();
     });
 
+    // Clear conversation button: empties messages, resets activity flag so handle hides.
+    const clearBtn = document.getElementById('agent-panel-clear');
+    if (clearBtn) {
+      clearBtn.addEventListener('click', e => {
+        e.preventDefault();
+        e.stopPropagation();
+        messages.innerHTML = '';
+        hasAgentActivity = false;
+        panel.classList.remove('has-activity');
+        updatePanelHandleVisibility();
+        if (panel.classList.contains('hidden')) {
+          // already hidden, handle will be hidden now
+        }
+      });
+    }
+
     // Clicking the panel (when collapsed or when the hidden grip is conceptually active)
     // expands it. The real re-open affordance is now the separate right-edge handle.
     let suppressNextClick = false;
@@ -21704,10 +22089,193 @@
     const previewList = document.getElementById('agent-selection-list');
     const previewProps = document.getElementById('agent-selection-properties');
     const panelTitle = document.getElementById('agent-panel-title');
+    const previewCanvas = document.getElementById('selection-preview-canvas');
+
+    // Preview rotator state (reused Three.js r128)
+    let previewRenderer = null;
+    let previewScene = null;
+    let previewCamera = null;
+    let previewMesh = null;
+    let previewRAF = null;
 
     function selectedWorldCoords() {
       const sel = window.__tinyworldSelection;
       return sel && sel.worldCoords ? sel.worldCoords() : [];
+    }
+
+    function updateSelectionPreview(target) {
+      if (!previewCanvas) return;
+      if (!target || !target.cell) {
+        // clear preview
+        if (previewMesh) {
+          if (previewScene) previewScene.remove(previewMesh);
+          previewMesh = null;
+        }
+        const actionsEl = document.getElementById('selection-preview-actions');
+        if (actionsEl) actionsEl.innerHTML = '';
+        if (previewRenderer && previewCanvas) {
+          const ctx = previewCanvas.getContext('2d');
+          ctx && ctx.clearRect(0, 0, previewCanvas.width, previewCanvas.height);
+        }
+        return;
+      }
+      // init renderer once
+      if (!previewRenderer) {
+        previewRenderer = new THREE.WebGLRenderer({ canvas: previewCanvas, antialias: true, alpha: true });
+        previewRenderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+        previewScene = new THREE.Scene();
+        previewCamera = new THREE.PerspectiveCamera(50, 1, 0.1, 100);
+        previewCamera.position.set(1.8, 1.6, 1.8);
+        previewCamera.lookAt(0, 0.6, 0);
+        const light = new THREE.DirectionalLight(0xffffff, 0.9);
+        light.position.set(2, 4, 2);
+        previewScene.add(light);
+        previewScene.add(new THREE.AmbientLight(0xffffff, 0.6));
+      }
+      // remove old mesh
+      if (previewMesh) {
+        previewScene.remove(previewMesh);
+        previewMesh = null;
+      }
+      // create mesh from kind (reuse factories where possible)
+      const kind = target.cell.kind || target.kind;
+      let obj = null;
+      try {
+        if (kind === 'house') obj = makeHouse(target.cell.floors || 2, target.cell.buildingType || 'cottage');
+        else if (kind === 'tree') obj = makeTree();
+        else if (kind === 'voxel-build') obj = makeVoxelBuild(target.cell);
+        else if (kind) obj = makeGenericObject(kind);
+      } catch (e) { /* fallback */ }
+      if (!obj) {
+        // simple fallback box
+        const geo = new THREE.BoxGeometry(0.8, 0.8, 0.8);
+        const mat = new THREE.MeshLambertMaterial({ color: 0x88aaff });
+        obj = new THREE.Mesh(geo, mat);
+      }
+      obj.scale.setScalar(0.9);
+      obj.position.set(0, 0.3, 0);
+      previewScene.add(obj);
+      previewMesh = obj;
+      resizePreviewRenderer();
+      populatePreviewActions(target);
+      // kick a slow rotate loop if not running
+      if (!previewRAF) startPreviewRotate();
+    }
+
+    function startPreviewRotate() {
+      const tick = () => {
+        if (previewMesh) {
+          previewMesh.rotation.y = (previewMesh.rotation.y || 0) + 0.012;
+        }
+        if (previewRenderer && previewScene && previewCamera) {
+          previewRenderer.render(previewScene, previewCamera);
+        }
+        previewRAF = requestAnimationFrame(tick);
+      };
+      previewRAF = requestAnimationFrame(tick);
+    }
+
+    function resizePreviewRenderer() {
+      if (!previewRenderer || !previewCanvas) return;
+      const rect = previewCanvas.getBoundingClientRect();
+      const w = Math.max(64, Math.floor(rect.width));
+      const h = w; // square
+      previewRenderer.setSize(w, h, false);
+      if (previewCamera) {
+        previewCamera.aspect = 1;
+        previewCamera.updateProjectionMatrix();
+      }
+    }
+
+    function populatePreviewActions(target) {
+      const container = document.getElementById('selection-preview-actions');
+      if (!container) return;
+      container.innerHTML = '';
+      if (!target || !target.cell) return;
+      const kind = target.cell.kind;
+      if (kind === 'house' || kind === 'voxel-build') {
+        // Body colors with real swatches
+        const bodyColors = [
+          { label: 'Stone', val: '#a9a39a', color: '#a9a39a' },
+          { label: 'Cream', val: '#f2dfb0', color: '#f2dfb0' },
+          { label: 'Brick', val: '#a84a3a', color: '#a84a3a' },
+          { label: 'Dark', val: '#77716a', color: '#77716a' },
+        ];
+        const bodyWrap = document.createElement('div');
+        bodyWrap.style.display = 'contents';
+        bodyColors.forEach(c => {
+          const chip = document.createElement('button');
+          chip.className = 'selection-prop-chip color-chip';
+          chip.innerHTML = `<span class="selection-prop-swatch" style="background:${c.color}"></span>${c.label}`;
+          chip.onclick = () => {
+            applySelectionProperty('bodyColor', c.val);
+            setTimeout(() => {
+              const t = selectedBoardObjectTarget();
+              if (t) updateSelectionPreview(t);
+            }, 10);
+          };
+          bodyWrap.appendChild(chip);
+        });
+        container.appendChild(bodyWrap);
+
+        // Top colors
+        const topColors = [
+          { label: 'Purple', val: '#6c55c7', color: '#6c55c7' },
+          { label: 'Blue', val: '#2f74b7', color: '#2f74b7' },
+          { label: 'Red', val: '#b84b38', color: '#b84b38' },
+          { label: 'Slate', val: '#3a3a40', color: '#3a3a40' },
+        ];
+        const topWrap = document.createElement('div');
+        topWrap.style.display = 'contents';
+        topColors.forEach(c => {
+          const chip = document.createElement('button');
+          chip.className = 'selection-prop-chip color-chip';
+          chip.innerHTML = `<span class="selection-prop-swatch" style="background:${c.color}"></span>${c.label}`;
+          chip.onclick = () => {
+            applySelectionProperty('topColor', c.val);
+            setTimeout(() => {
+              const t = selectedBoardObjectTarget();
+              if (t) updateSelectionPreview(t);
+            }, 10);
+          };
+          topWrap.appendChild(chip);
+        });
+        container.appendChild(topWrap);
+
+        // Voxel / Normal style toggle
+        const styleChip = document.createElement('button');
+        styleChip.className = 'selection-prop-chip';
+        styleChip.textContent = target.cell.appearance?.objectStyle === 'voxel' ? 'Normal' : 'Voxel';
+        styleChip.onclick = () => {
+          const next = target.cell.appearance?.objectStyle === 'voxel' ? 'normal' : 'voxel';
+          applySelectionProperty('objectStyle', next);
+          setTimeout(() => {
+            const t = selectedBoardObjectTarget();
+            if (t) updateSelectionPreview(t);
+          }, 10);
+        };
+        container.appendChild(styleChip);
+      }
+    }
+
+    // Tab switching for selection preview (Preview vs Details)
+    if (previewBox) {
+      previewBox.addEventListener('click', (e) => {
+        const tab = e.target.closest('.selection-tab');
+        if (!tab) return;
+        const targetTab = tab.getAttribute('data-tab');
+        previewBox.querySelectorAll('.selection-tab').forEach(t => t.classList.toggle('active', t === tab));
+        previewBox.querySelectorAll('.selection-tab-content').forEach(c => {
+          c.classList.toggle('active', c.getAttribute('data-content') === targetTab);
+        });
+        // ensure preview fills width + re-renders when switched to
+        if (targetTab === 'preview') {
+          resizePreviewRenderer();
+          if (previewRenderer && previewScene && previewCamera) {
+            previewRenderer.render(previewScene, previewCamera);
+          }
+        }
+      });
     }
 
     function applySelectionProperty(rowKey, value) {
@@ -21897,6 +22465,7 @@
       if (!summary) {
         panel.classList.remove('has-selection');
         previewBox.hidden = true;
+        updateSelectionPreview(null);
         syncAgentTargetChip(null, null);
         if (previewProps) {
           previewProps.innerHTML = '';
@@ -21909,6 +22478,7 @@
       panel.classList.add('has-selection');
       previewBox.hidden = false;
       const selectedObject = selectedBoardObjectTarget();
+      updateSelectionPreview(selectedObject);
       syncAgentTargetChip(selectedObject, summary);
       previewCount.textContent = selectedObject
         ? 'Selected: ' + selectedBoardObjectLabel(selectedObject)
@@ -23779,6 +24349,8 @@
       wrap.classList.toggle('collapsed');
       try { localStorage.setItem('tinyworld:minimap.collapsed', wrap.classList.contains('collapsed') ? '1' : '0'); } catch (_) {}
     }
+    const minimapToggle = document.getElementById('minimap-toggle');
+    if (minimapToggle) minimapToggle.addEventListener('click', toggleCollapsed);
     // Keyboard shortcut: N toggles the minimap (matches OWB).
     window.addEventListener('keydown', e => {
       if (e.target && (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.isContentEditable)) return;

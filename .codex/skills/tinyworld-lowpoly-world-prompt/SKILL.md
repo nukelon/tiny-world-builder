@@ -41,6 +41,21 @@ Primitive assembly prompting:
   - quarry = raised dirt/grass terraces + rocks of varied floors + path access road + sparse tufts.
 - Emphasize legibility from the default isometric camera: 3–5 clear assembled features beats many scattered cells.
 
+Voxel stamp prompting:
+
+- For new text/image-to-voxel stamps, prefer semantic `customParts` first instead
+  of raw voxel clouds. This preserves editable object structure and avoids
+  low-quality broad blocks.
+- Include the allowed material list, selected/source object intent, source
+  parts when available, image reference when present, `allowedBounds`, and a
+  quality target that calls out connected layered detail.
+- Use raw `{x,y,z,color}` voxels after a seed exists and the user asks to
+  reinterpret/upscale/refine density; keep returned voxels bounded and omit
+  hidden interior fill.
+- Do not let a reference image or prior Japanese stamp bias unrelated objects
+  into pagodas, gardens, torii, sakura, or shrine motifs unless explicitly
+  requested.
+
 For Auto suggestions:
 
 - Return candidate actions, not coordinates.

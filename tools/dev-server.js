@@ -282,6 +282,9 @@ async function handleReinterpretStamp(req, res) {
       '{"id": string, "kind": "box"|"cylinder"|"cone", "material": one of allowedMaterials, "size": [x,y,z], "pos": [x,y,z], "scale": [1,1,1]}.',
       'Use semantic reinterpretation: do not merely stretch source parts.',
       'Increase detail with small trim blocks, windows, roof ribs, railings, bevel-like layered bands, doors, caps, and silhouette-defining parts.',
+      'When source parts are empty, create a new original stamp from instruction and imageInstruction, using semantic construction rather than placeholder masses.',
+      'Quality contract: produce a readable asset from the default isometric camera with distinct base, body, top, trim, and detail parts where those concepts apply.',
+      'Use a richer part count for complex assets, but keep parts purposeful and connected; avoid noisy random cubes.',
       'Keep total customParts under 180 and dimensions within a compact stamp footprint.',
       'Preserve selectedObject.label, selectedObject.stamp, and the sourceCustomParts category exactly unless instruction explicitly asks for a different object.',
       'Do not introduce Japanese, pagoda, temple, shrine, torii, sakura, or garden styling unless the instruction or selectedObject explicitly asks for it.',
@@ -299,6 +302,7 @@ async function handleReinterpretStamp(req, res) {
       renderFootprint: input.renderFootprint || null,
       desiredScale: input.desiredScale || [1, 1, 1],
       style: input.style || 'low-poly voxel diorama',
+      qualityTarget: 'semantic editable customParts first; layered detail; no broad one-block substitute; no detached decoration',
       imageInstruction: input.imageDataUrl ? 'Use the attached image as visual reference for the stamp.' : 'Use selectedObject/sourceParts as reference.',
     });
     const content = [
